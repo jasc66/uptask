@@ -1,7 +1,9 @@
 import Proyecto from "../models/Proyecto.js";
 
 const obtenerProyectos = async (req, res) => {
+    const proyectos = await Proyecto.find().where('creador').equals(req.usuario);
 
+    res.json(proyectos)
 }
 
 const nuevoProyecto = async (req, res) => {
@@ -17,7 +19,17 @@ const nuevoProyecto = async (req, res) => {
 }
 
 const obtenerProyecto = async (req, res) => {
-    
+    const { id } = req.params;
+
+    const proyecto = await Proyecto.findById(id);
+    if(!proyecto){
+        return res.status(404).json({ msg: "No Encontrado"});
+        }
+        
+        if (proyecto.creador.toString() !== req.usuario._id.toString()){
+            return res.status(401).json({ msg: "No tienes los permisos"});
+        }
+        res.json(proyecto)
 }
 
 const editarProyecto = async (req, res) => {
