@@ -5,7 +5,7 @@ const OlvidePassword = () => {
     <>    
     <div className="relative flex flex-col justify-center min-h-screen overflow-hidden">
     <h1 className="text-green-800 font-black text-6xl capitalize text-center">Recupera tu acceso y no pierdas tus {''} <span className="next-slate-700">Tareas</span></h1>
-      <div className="w-full p-6 m-auto bg-white rounded-md shadow-xl lg:max-w-xl">
+      <div className="w-full p-6 m-auto bg-white rounded-md shadow-xl lg:max-w-xl bg-gradient-to-br from-gray-400 via-lime-100 to-red-100">
         <h1 className="text-3xl font-semibold text-center text-green-700 uppercase">
           Palma Tica S.A
         </h1>

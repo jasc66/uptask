@@ -1,15 +1,62 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import Alerta from "../components/Alerta.jsx";
+import axios from "axios"
 
 const Registrar = () => {
+    const [nombre, setNombre ] = useState(''); 
+    const [email, setEmail ] = useState(''); 
+    const [password, setPassword ] = useState(''); 
+    const [repetirPassword, setRepetirPassword ] = useState(''); 
+    const [alerta, setAlerta ] = useState({});
+
+    const handleSubmit = async e => {
+      e.preventDefault();
+
+      if([nombre, email, password, repetirPassword].includes('')){
+        setAlerta({
+          msg: 'Todos los campos son obligatorios',
+          error: true
+        })
+        return
+      }
+      if(password !== repetirPassword){
+        setAlerta({
+          msg: 'Los Password no son iguales',
+          error: true
+        })
+        return
+      }
+      if(password.length < 8 ){
+        setAlerta({
+          msg: 'El Password es muy corto, agrega minimo 8 caracteres',
+          error: true
+        })
+        return
+      }
+      setAlerta({})
+      //Crear el usuario en la API
+      try {
+        const respuesta = await axios.post('http://localhost:4000/api/usuarios', {nombre, email, password})
+        console.log(respuesta)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+
+    const { msg } = alerta;
+
   return (
     <>    
     <h1 className="text-green-800 font-black text-6xl capitalize text-center">Crea tu cuenta y administra tus {''}<span className="next-slate-700">Tareas</span></h1>
+
+    {msg && <Alerta alerta={alerta}/>}
     <div className="relative flex flex-col justify-center min-h-screen overflow-hidden">
-      <div className="w-full p-6 m-auto bg-white rounded-md shadow-xl lg:max-w-xl">
+      <div className="w-full p-6 m-auto bg-white rounded-md shadow-xl lg:max-w-xl bg-gradient-to-br from-gray-400 via-lime-100 to-red-100">
         <h1 className="text-3xl font-semibold text-center text-green-700 uppercase">
           Palma Tica S.A
         </h1>
-        <form className="my-10 shadow rounded-lg px-10 py-10">
+        <form className="my-10 shadow rounded-lg px-10 py-10" onSubmit={handleSubmit}>
         <div className="mb-4">
             <label htmlFor="nombre" className="block mb-2 text-xl text-gray-700 font-bold">
               Nombre
@@ -20,6 +67,8 @@ const Registrar = () => {
               id="nombre"
               name="nombre"
               className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
             />
           </div>
         <div className="mb-4">
@@ -32,6 +81,8 @@ const Registrar = () => {
               id="email"
               name="email"
               className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
             />
           </div>
           <div className="mb-4">
@@ -44,6 +95,8 @@ const Registrar = () => {
               placeholder="password"
               name="password"
               className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
             />
           </div>
           <div className="mb-4">
@@ -56,6 +109,8 @@ const Registrar = () => {
               placeholder="Repetir Password"
               name="password2"
               className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
+              value={repetirPassword}
+              onChange={e => setRepetirPassword(e.target.value)}
             />
           </div>
           <div className="mt-6">
