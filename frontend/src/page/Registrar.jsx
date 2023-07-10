@@ -37,6 +37,7 @@ const Registrar = () => {
       setAlerta({})
       //Crear el usuario en la API
       try {
+        //TODO: Mover hacia un cliente Axios
         const {data} = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/usuarios`, {nombre, email, password})
           setAlerta({
             msg: data.msg,
@@ -130,7 +131,8 @@ const Registrar = () => {
                 className="w-full px-4 py-2 tracking-wide text-white transition-colors duration-200 transform bg-green-700 rounded-md hover:bg-green-600 focus:outline-none focus:bg-green-600 hover:cursor-pointer">
             </input>
           </div>
-          <nav className="lg:flex lg:justify-between">
+        </form>
+        <nav className="lg:flex lg:justify-between">
             <Link className="block text-center my-5 text-slate-500 uppercase text-sm"
             to="/">Ya tienes una cuenta? Inicia Sesión
             </Link>
@@ -138,8 +140,6 @@ const Registrar = () => {
             to="/olvide-password">Olvide mi Password
             </Link>
         </nav>
-        </form>
-
         <div className="relative flex items-center justify-center w-full mt-6 border border-t">
           <div className="absolute px-5 bg-white">Or</div>
         </div>
