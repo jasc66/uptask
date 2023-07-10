@@ -1,15 +1,39 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Alerta from "../components/Alerta";
+import clienteAxios from "../config/clienteAxios";
 
 function Login() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [alerta, setAlerta] = useState({})
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+
+    if([email, password].includes('')){
+      setAlerta({
+        msg: 'Todos los campos son obligatorios',
+        error: true
+      });
+      return
+    }
+  }
+
+  const {msg} = alerta
+
   return (
     <>    
     <h1 className="text-green-800 font-black text-6xl capitalize text-center">Inicia sesión y administra tus {''} <span className="next-slate-700">Tareas</span></h1>
     <div className="relative flex flex-col justify-center min-h-screen overflow-hidden">
+          {msg && <Alerta alerta={alerta}/>}
       <div className="w-full p-6 m-auto bg-white rounded-md shadow-xl lg:max-w-xl">
         <h1 className="text-3xl font-semibold text-center text-green-700 uppercase">
           MAG
         </h1>
-        <form className="my-10 shadow rounded-lg px-10 py-10">
+        <form className="my-10 shadow rounded-lg px-10 py-10"
+        onSubmit={handleSubmit}
+        >
         <div className="mb-4">
             <label htmlFor="email" className="block mb-2 text-xl text-gray-700 font-bold">
               Email
@@ -20,6 +44,8 @@ function Login() {
               id="email"
               name="email"
               className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
             />
           </div>
           <div className="mb-4">
@@ -32,6 +58,8 @@ function Login() {
               placeholder="password"
               name="password"
               className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
             />
           </div>
           <div className="mt-6">

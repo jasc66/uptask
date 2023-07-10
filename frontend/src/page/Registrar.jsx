@@ -1,59 +1,63 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Alerta from "../components/Alerta.jsx";
-import axios from "axios"
+import clienteAxios from "../config/clienteAxios.jsx";
 
 const Registrar = () => {
-    const [nombre, setNombre ] = useState(''); 
-    const [email, setEmail ] = useState(''); 
-    const [password, setPassword ] = useState(''); 
-    const [repetirPassword, setRepetirPassword ] = useState(''); 
-    const [alerta, setAlerta ] = useState({});
+    const [ nombre, setNombre ] = useState('')
+    const [ email, setEmail ] = useState('')
+    const [ password, setPassword ] = useState('')
+    const [ repetirPassword, setRepetirPassword ] = useState('')
+    const [ alerta, setAlerta ] = useState({})
 
     const handleSubmit = async e => {
-      e.preventDefault();
+        e.preventDefault();
 
-      if([nombre, email, password, repetirPassword].includes('')){
-        setAlerta({
-          msg: 'Todos los campos son obligatorios',
-          error: true
-        })
-        return
-      }
-      if(password !== repetirPassword){
-        setAlerta({
-          msg: 'Los Password no son iguales',
-          error: true
-        })
-        return
-      }
-      if(password.length < 8 ){
-        setAlerta({
-          msg: 'El Password es muy corto, agrega minimo 8 caracteres',
-          error: true
-        })
-        return
-      }
-      setAlerta({})
-      //Crear el usuario en la API
-      try {
-        //TODO: Mover hacia un cliente Axios
-        const {data} = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/usuarios`, {nombre, email, password})
-          setAlerta({
-            msg: data.msg,
-            error:false
-          })
+        if([nombre, email, password, repetirPassword].includes('')) {
+           setAlerta({
+               msg: 'Todos los campos son obligatorios',
+               error: true
+           })
+           return
+        }
 
-          setNombre('')
-          setEmail('')
-          setPassword('')
-          setRepetirPassword('')
-      } catch (error) {
-        setAlerta({
-          msg: error.response.data.msg,
-          error: true
-        })
-      }
+        if(password !== repetirPassword ) {
+            setAlerta({
+                msg: 'Los password no son iguales',
+                error: true
+            })
+            return
+        }
+
+        if(password.length < 6 ) {
+            setAlerta({
+                msg: 'El Password es muy corto, agrega minimo 6 caracteres',
+                error: true
+            })
+            return
+        }
+
+        setAlerta({})
+
+        // Crear el usuario en la API
+        try {
+            const { data } = await clienteAxios.post(`/usuarios`, {nombre, email, password} )
+
+            setAlerta({
+                msg: data.msg,
+                error: false
+            })
+
+            setNombre('')
+            setEmail('')
+            setPassword('')
+            setRepetirPassword('')
+        } catch (error) {
+            setAlerta({
+                msg: error.response.data.msg,
+                error: true
+            })
+        }
     }
 
     const { msg } = alerta;
