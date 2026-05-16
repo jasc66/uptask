@@ -1,15 +1,15 @@
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 const tareaSchema = mongoose.Schema({
 	nombre: {
 		type: String,
 		trim: true,
-		require: true,
+		required: true,
 	},
 	descripcion: {
 		type: String,
 		trim: true,
-		require: true,
+		required: true,
 	},
 	estado: {
 		type: Boolean,
@@ -17,12 +17,12 @@ const tareaSchema = mongoose.Schema({
 	},
 	fechaEntrega: {
 		type: Date,
-		require: true,
+		required: true,
 		default: Date.now(),
 	},
 	prioridad: {
 		type: String,
-		require: true,
+		required: true,
 		enum: ["Baja", "Media", "Alta"],
 	},
 	proyecto: {

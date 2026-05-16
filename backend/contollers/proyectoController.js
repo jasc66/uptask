@@ -24,7 +24,7 @@ const obtenerProyecto = async (req, res) => {
         id
     } = req.params;
 
-    const proyecto = await Proyecto.findById(id);
+    const proyecto = await Proyecto.findById(id).populate("tareas");
     if (!proyecto) {
         const error = new Error("No Encontrado")
         return res.status(404).json({
@@ -32,16 +32,14 @@ const obtenerProyecto = async (req, res) => {
         });
     }
     if (proyecto.creador.toString() !== req.usuario._id.toString()) {
-        const error = new Error("Acciòn No Válida")
+        const error = new Error("Accion No Válida")
         return res.status(401).json({
             msg: error.message
         });
     }
-    //Obtener las tareas del proyecto
-    const tareas = await Tarea.find().where("proyecto").equals(proyecto._id);
+
     res.json({
         proyecto,
-        tareas,
     });
     
 }
