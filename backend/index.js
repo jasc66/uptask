@@ -1,5 +1,7 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors"
 import conectarDB from "./config/db.js";
 import usuarioRoutes from './routes/usuarioRoutes.js';
@@ -10,19 +12,20 @@ import tareaRoutes from "./routes/tareaRoutes.js";
 const app = express();
 app.use(express.json());
 
-dotenv.config();
-
 conectarDB();
 
 //Configurar CORS
-const whiteList = process.env.FRONTEND_URL.split(',').map(url => url.trim());
+const whiteList = (process.env.FRONTEND_URL || 'http://localhost:5173')
+	.split(',')
+	.map(url => url.trim())
+	.filter(Boolean);
 
 const corsOptions = {
 	origin: function(origin, callback) {
 		if (!origin || whiteList.includes(origin)) {
 			callback(null, true)
-		}else{
-			callback(new Error("Error de Cors"))
+		} else {
+			callback(new Error(`CORS bloqueado para origen: ${origin}`))
 		}
 	}
 }
