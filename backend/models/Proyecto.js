@@ -37,6 +37,10 @@ const proyectosSchema = mongoose.Schema(
         ref: "Usuario",
       },
     ],
+    color: {
+      type: String,
+      default: '#6366f1',
+    },
   },
   {
     timestamps: true,
