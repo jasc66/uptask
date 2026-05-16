@@ -8,23 +8,19 @@ function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [alerta, setAlerta] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
 
-  const {setAuth } = useAuth();
-
+  const { setAuth } = useAuth();
   const navigate = useNavigate()
 
   const handleSubmit = async e => {
     e.preventDefault();
-
-    if([email, password].includes('')){
-      setAlerta({
-        msg: 'Todos los campos son obligatorios',
-        error: true
-      });
+    if ([email, password].includes('')) {
+      setAlerta({ msg: 'Todos los campos son obligatorios', error: true });
       return
     }
     try {
-      const { data } = await clienteAxios.post('/usuarios/login', {email, password})
+      const { data } = await clienteAxios.post('/usuarios/login', { email, password })
       setAlerta({})
       localStorage.setItem('token', data.token)
       setAuth(data)
@@ -32,108 +28,163 @@ function Login() {
     } catch (error) {
       setAlerta({
         msg: error.response?.data?.msg ?? 'Error de conexión con el servidor',
-        error:true
+        error: true
       })
     }
   }
 
-  const {msg} = alerta
+  const { msg } = alerta
 
   return (
-    <>    
-    <h1 className="text-green-800 font-black text-6xl capitalize text-center">Inicia sesión y administra tus {''} <span className="next-slate-700">Tareas</span></h1>
-    <div className="relative flex flex-col justify-center min-h-screen overflow-hidden">
-          {msg && <Alerta alerta={alerta}/>}
-      <div className="w-full p-6 m-auto bg-white rounded-md shadow-xl lg:max-w-xl">
-        <h1 className="text-3xl font-semibold text-center text-green-700 uppercase">
-          MAG
-        </h1>
-        <form className="my-10 shadow rounded-lg px-10 py-10"
-        onSubmit={handleSubmit}
-        >
-        <div className="mb-4">
-            <label htmlFor="email" className="block mb-2 text-xl text-gray-700 font-bold">
-              Email
-            </label>
-            <input
-              type="email"
-              placeholder="Email de Registro"
-              id="email"
-              name="email"
-              className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="password" className="block mb-2 text-xl font-bold text-gray-700">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              placeholder="password"
-              name="password"
-              className="w-full p-3 mt-3 border border-gray-400 rounded-xl  bg-gray-50"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-          </div>
-          <div className="mt-6">
-            <input
-                type="submit"
-                value="Iniciar Sesión"
-                className="w-full px-4 py-2 tracking-wide text-white transition-colors duration-200 transform bg-green-700 rounded-md hover:bg-green-600 focus:outline-none focus:bg-green-600 hover:cursor-pointer">
-            </input>
-          </div>
-        </form>
-        <nav className="lg:flex lg:justify-between">
-            <Link className="block text-center my-5 text-slate-500 uppercase text-sm"
-            to="/registrar">¿No tienes una cuenta? Regístrate
-            </Link>
-            <Link className="block text-center my-5 text-slate-500 uppercase text-sm"
-            to="/olvide-password">Olvide mi Password
-            </Link>
-        </nav>
-        <div className="relative flex items-center justify-center w-full mt-6 border border-t">
-          <div className="absolute px-5 bg-white">Or</div>
+    <div className="min-h-screen flex">
+      {/* Panel izquierdo — branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 relative overflow-hidden flex-col justify-between p-12">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600 rounded-full opacity-10" />
+        <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-violet-600 rounded-full opacity-10" />
+        <div className="absolute top-1/3 right-0 w-64 h-64 bg-indigo-500 rounded-full opacity-5 translate-x-1/2" />
+
+        <div className="relative z-10">
+          <NexoLogo textClass="text-white" />
         </div>
-        <div className="flex mt-4 gap-x-2">
-          <button
-            type="button"
-            className="flex items-center justify-center w-full p-2 border border-gray-600 rounded-md focus:ring-2 focus:ring-offset-1 focus:ring-green-600"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 32 32"
-              className="w-5 h-5 fill-current"
+
+        <div className="relative z-10 space-y-6">
+          <h1 className="text-4xl font-bold text-white leading-tight">
+            Gestiona proyectos,<br />
+            <span className="text-indigo-400">conecta equipos.</span>
+          </h1>
+          <p className="text-slate-400 text-lg leading-relaxed max-w-sm">
+            Organiza tareas, colabora con tu equipo y lleva cada proyecto al siguiente nivel.
+          </p>
+          <div className="flex flex-col gap-4 pt-4">
+            {[
+              "Gestión de proyectos en tiempo real",
+              "Colaboración con equipos",
+              "Seguimiento de tareas y estados",
+            ].map((text, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-indigo-500 bg-opacity-20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                </div>
+                <span className="text-slate-300 text-sm">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="relative z-10 text-slate-600 text-xs">
+          © {new Date().getFullYear()} Nexo. Todos los derechos reservados.
+        </p>
+      </div>
+
+      {/* Panel derecho — formulario */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-24 bg-white">
+        <div className="lg:hidden mb-10">
+          <NexoLogo textClass="text-slate-900" />
+        </div>
+
+        <div className="w-full max-w-md mx-auto">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Bienvenido de vuelta</h2>
+            <p className="text-slate-500">Ingresa a tu cuenta para continuar</p>
+          </div>
+
+          {msg && <Alerta alerta={alerta} />}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+                Correo electrónico
+              </label>
+              <input
+                type="email"
+                id="email"
+                placeholder="tu@ejemplo.com"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
+                  Contraseña
+                </label>
+                <Link
+                  to="/olvide-password"
+                  className="text-sm text-indigo-600 hover:text-indigo-500 font-medium transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all pr-12"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <IconEyeOff /> : <IconEye />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
-              <path d="M16.318 13.714v5.484h9.078c-0.37 2.354-2.745 6.901-9.078 6.901-5.458 0-9.917-4.521-9.917-10.099s4.458-10.099 9.917-10.099c3.109 0 5.193 1.318 6.38 2.464l4.339-4.182c-2.786-2.599-6.396-4.182-10.719-4.182-8.844 0-16 7.151-16 16s7.156 16 16 16c9.234 0 15.365-6.49 15.365-15.635 0-1.052-0.115-1.854-0.255-2.651z"></path>
-            </svg>
-          </button>
-          <button className="flex items-center justify-center w-full p-2 border border-gray-600 rounded-md focus:ring-2 focus:ring-offset-1 focus:ring-green-600">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 32 32"
-              className="w-5 h-5 fill-current"
-            >
-              <path d="M16 0.396c-8.839 0-16 7.167-16 16 0 7.073 4.584 13.068 10.937 15.183 0.803 0.151 1.093-0.344 1.093-0.772 0-0.38-0.009-1.385-0.015-2.719-4.453 0.964-5.391-2.151-5.391-2.151-0.729-1.844-1.781-2.339-1.781-2.339-1.448-0.989 0.115-0.968 0.115-0.968 1.604 0.109 2.448 1.645 2.448 1.645 1.427 2.448 3.744 1.74 4.661 1.328 0.14-1.031 0.557-1.74 1.011-2.135-3.552-0.401-7.287-1.776-7.287-7.907 0-1.751 0.62-3.177 1.645-4.297-0.177-0.401-0.719-2.031 0.141-4.235 0 0 1.339-0.427 4.4 1.641 1.281-0.355 2.641-0.532 4-0.541 1.36 0.009 2.719 0.187 4 0.541 3.043-2.068 4.381-1.641 4.381-1.641 0.859 2.204 0.317 3.833 0.161 4.235 1.015 1.12 1.635 2.547 1.635 4.297 0 6.145-3.74 7.5-7.296 7.891 0.556 0.479 1.077 1.464 1.077 2.959 0 2.14-0.020 3.864-0.020 4.385 0 0.416 0.28 0.916 1.104 0.755 6.4-2.093 10.979-8.093 10.979-15.156 0-8.833-7.161-16-16-16z"></path>
-            </svg>
-          </button>
-          <button className="flex items-center justify-center w-full p-2 border border-gray-600 rounded-md focus:ring-2 focus:ring-offset-1 focus:ring-green-600">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 32 32"
-              className="w-5 h-5 fill-current"
-            >
-              <path d="M31.937 6.093c-1.177 0.516-2.437 0.871-3.765 1.032 1.355-0.813 2.391-2.099 2.885-3.631-1.271 0.74-2.677 1.276-4.172 1.579-1.192-1.276-2.896-2.079-4.787-2.079-3.625 0-6.563 2.937-6.563 6.557 0 0.521 0.063 1.021 0.172 1.495-5.453-0.255-10.287-2.875-13.52-6.833-0.568 0.964-0.891 2.084-0.891 3.303 0 2.281 1.161 4.281 2.916 5.457-1.073-0.031-2.083-0.328-2.968-0.817v0.079c0 3.181 2.26 5.833 5.26 6.437-0.547 0.145-1.131 0.229-1.724 0.229-0.421 0-0.823-0.041-1.224-0.115 0.844 2.604 3.26 4.5 6.14 4.557-2.239 1.755-5.077 2.801-8.135 2.801-0.521 0-1.041-0.025-1.563-0.088 2.917 1.86 6.36 2.948 10.079 2.948 12.067 0 18.661-9.995 18.661-18.651 0-0.276 0-0.557-0.021-0.839 1.287-0.917 2.401-2.079 3.281-3.396z"></path>
-            </svg>
-          </button>
+              Iniciar sesión
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-slate-500 text-sm">
+            ¿No tienes una cuenta?{' '}
+            <Link to="/registrar" className="text-indigo-600 hover:text-indigo-500 font-semibold transition-colors">
+              Regístrate gratis
+            </Link>
+          </p>
         </div>
       </div>
     </div>
-    </>
-  );
+  )
+}
+
+function NexoLogo({ textClass }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <span className={`text-xl font-bold tracking-tight ${textClass}`}>Nexo</span>
+    </div>
+  )
+}
+
+function IconEye() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  )
+}
+
+function IconEyeOff() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+    </svg>
+  )
 }
 
 export default Login;

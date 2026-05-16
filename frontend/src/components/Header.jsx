@@ -4,7 +4,14 @@ const Header = () => {
   return (
     <header className="px-4 py-5 bg-white border-b">
         <div className="md:flex md:justify-between">
-            <h2 className="text-4x1 text-green-600 font-black text-center">MAG</h2>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Nexo</h2>
+            </div>
             <input 
             type="search"
             placeholder="Buscar Proyecto"
