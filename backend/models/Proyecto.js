@@ -33,8 +33,15 @@ const proyectosSchema = mongoose.Schema(
     ],
     colaboradores: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Usuario",
+        usuario: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Usuario",
+        },
+        rol: {
+          type: String,
+          enum: ["editor", "lector"],
+          default: "editor",
+        },
       },
     ],
     color: {

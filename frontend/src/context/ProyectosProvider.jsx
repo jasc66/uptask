@@ -13,27 +13,35 @@ const ProyectosProvider = ({children}) => {
     const [proyectoEditar, setProyectoEditar] = useState({})
     const [modalFormularioTarea, setModalFormularioTarea] = useState(false)
     const [tareaEditar, setTareaEditar] = useState({})
+    const [tareaDetalle, setTareaDetalle] = useState(null)
+    const [misTareas, setMisTareas] = useState([])
+    const [etiquetasProyecto, setEtiquetasProyecto] = useState([])
 
     useEffect(()=>{
+        const token = localStorage.getItem('token')
+        if(!token) return
+        const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+
         const obtenerProyectos = async () => {
             try {
-                const token = localStorage.getItem('token')
-                if(!token) return
-    
-                const config = {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`
-                    }
-                }
                 const { data } = await clienteAxios('/proyectos', config)
                 setProyectos(data)
-    
             } catch (error) {
-                console.log(error)        
+                console.log(error)
             }
         }
+
+        const cargarMisTareas = async () => {
+            try {
+                const { data } = await clienteAxios('/tareas/mis-tareas', config)
+                setMisTareas(data)
+            } catch (error) {
+                console.log(error)
+            }
+        }
+
         obtenerProyectos()
+        cargarMisTareas()
     }, [])
 
     const mostrarAlerta = alerta => {
@@ -121,12 +129,23 @@ const ProyectosProvider = ({children}) => {
 
     const handleModalTarea = () => {
         setTareaEditar({})
+        setTareaDetalle(null)
         setModalFormularioTarea(!modalFormularioTarea)
     }
 
-    const handleModalEditarTarea = (tarea) => {
+    const handleModalEditarTarea = async (tarea) => {
         setTareaEditar(tarea)
+        setTareaDetalle(null)
         setModalFormularioTarea(true)
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios(`/tareas/${tarea._id}`, config)
+            setTareaDetalle(data)
+        } catch (error) {
+            console.log(error)
+        }
     }
 
     const submitTarea = async (tarea) => {
@@ -148,6 +167,7 @@ const ProyectosProvider = ({children}) => {
             setModalFormularioTarea(false)
         } catch (error) {
             console.log(error)
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear la tarea', error: true })
         }
     }
 
@@ -165,6 +185,7 @@ const ProyectosProvider = ({children}) => {
             setModalFormularioTarea(false)
         } catch (error) {
             console.log(error)
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar la tarea', error: true })
         }
     }
 
@@ -178,6 +199,7 @@ const ProyectosProvider = ({children}) => {
             mostrarAlerta({ msg: data.msg, error: false })
         } catch (error) {
             console.log(error)
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar la tarea', error: true })
         }
     }
 
@@ -196,10 +218,142 @@ const ProyectosProvider = ({children}) => {
             const {data} = await clienteAxios(`/proyectos/${id}`, config)
             const {proyecto} = data
             setProyecto(proyecto)
+
+            const { data: etiquetas } = await clienteAxios(`/proyectos/${id}/etiquetas`, config)
+            setEtiquetasProyecto(etiquetas)
         } catch (error) {
             console.log(error)
         }finally {
             setCargando(false)
+        }
+    }
+
+    const crearEtiqueta = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/etiquetas`, datos, config)
+            setEtiquetasProyecto(prev => [...prev, data])
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear etiqueta', error: true })
+        }
+    }
+
+    const eliminarEtiqueta = async (proyectoId, etiquetaId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/proyectos/${proyectoId}/etiquetas/${etiquetaId}`, config)
+            setEtiquetasProyecto(prev => prev.filter(e => e._id !== etiquetaId))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar etiqueta', error: true })
+        }
+    }
+
+    const agregarSubtarea = async (tareaId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/tareas/subtarea/${tareaId}`, datos, config)
+            setTareaDetalle(prev => ({
+                ...prev,
+                subtareas: [...(prev?.subtareas ?? []), data]
+            }))
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t =>
+                    t._id === tareaId
+                        ? { ...t, subtareas: [...(t.subtareas ?? []), data] }
+                        : t
+                )
+            }))
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear subtarea', error: true })
+        }
+    }
+
+    const cambiarEstadoSubtarea = async (subtareaId, tareaId, estado) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/tareas/estado/${subtareaId}`, { estado }, config)
+            setTareaDetalle(prev => ({
+                ...prev,
+                subtareas: prev?.subtareas?.map(s => s._id === subtareaId ? { ...s, estado: data.estado } : s) ?? []
+            }))
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t =>
+                    t._id === tareaId
+                        ? { ...t, subtareas: t.subtareas?.map(s => s._id === subtareaId ? { ...s, estado: data.estado } : s) ?? [] }
+                        : t
+                )
+            }))
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const cambiarEstadoTarea = async (tareaId, estado) => {
+        if (!tareaId) return
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/tareas/estado/${tareaId}`, { estado }, config)
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas.map(t => t._id === data._id ? { ...t, estado: data.estado } : t)
+            }))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al cambiar estado', error: true })
+        }
+    }
+
+    const agregarComentario = async (tareaId, contenido) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/tareas/comentario/${tareaId}`, { contenido }, config)
+            setTareaDetalle(prev => ({
+                ...prev,
+                actividad: [...(prev?.actividad ?? []), data]
+            }))
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const agregarColaborador = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/agregar-colaborador/${proyectoId}`, datos, config)
+            mostrarAlerta({ msg: data.msg, error: false })
+            await obtenerProyecto(proyectoId)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al agregar colaborador', error: true })
+        }
+    }
+
+    const eliminarColaborador = async (proyectoId, usuarioId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/eliminar-colaborador/${proyectoId}`, { usuarioId }, config)
+            mostrarAlerta({ msg: data.msg, error: false })
+            await obtenerProyecto(proyectoId)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar colaborador', error: true })
         }
     }
     
@@ -226,6 +380,17 @@ const ProyectosProvider = ({children}) => {
                 submitTarea,
                 tareaEditar,
                 eliminarTarea,
+                agregarColaborador,
+                eliminarColaborador,
+                cambiarEstadoTarea,
+                tareaDetalle,
+                agregarComentario,
+                misTareas,
+                etiquetasProyecto,
+                crearEtiqueta,
+                eliminarEtiqueta,
+                agregarSubtarea,
+                cambiarEstadoSubtarea,
             }}
             >{children}
 

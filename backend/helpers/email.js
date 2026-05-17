@@ -15,12 +15,12 @@ export const emailRegistro = async (datos)=> {
 
       //Información del email 
       const info = await transport.sendMail({
-        from: '"MAG - Administrador de Proyectos" <correo@mag.go.cr>',
+        from: '"DGSC - Administrador de Proyectos" <correo@dgsc.go.cr>',
         to: email,
-        subject: "Ministerio de Agricultura - Comprueba tu cuenta",
-        text: "Comprueba tu cuenta en MAG",
+        subject: "DGSC - Comprueba tu cuenta",
+        text: "Comprueba tu cuenta en DGSC",
         html: 
-        ` <p>Hola: ${nombre} Comprueba tu cuenta en MAG-Tareas </p>
+        ` <p>Hola: ${nombre} Comprueba tu cuenta en DGSC-Tareas </p>
         <p>Tu cuenta ya esta casi lista, solo debes comprobarla en el siguiente enlace:</p>
         
         <a href="${process.env.FRONTEND_URL}/confirmar/${token}">Comprobar Cuenta</a>
@@ -44,9 +44,9 @@ export const emailOlvidePassword = async (datos)=> {
 
     //Información del email 
     const info = await transport.sendMail({
-      from: '"MAG - Administrador de Proyectos" <correo@mag.go.cr>',
+      from: '"DGSC - Administrador de Proyectos" <correo@dgsc.go.cr>',
       to: email,
-      subject: "Ministerio de Agricultura - Reestablece tu Password",
+      subject: "DGSC - Reestablece tu Password",
       text: "Reestablece tu Password",
       html: 
       ` <p>Hola: ${nombre} has solicitado reestablecer tu password </p>
