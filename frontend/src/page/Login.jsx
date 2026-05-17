@@ -4,6 +4,33 @@ import Alerta from "../components/Alerta";
 import clienteAxios from "../config/clienteAxios";
 import useAuth from "../hooks/useAuth";
 
+const FEATURES = [
+  {
+    text: "Gestión de proyectos en tiempo real",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    text: "Colaboración con equipos",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    text: "Seguimiento de tareas y estados",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+]
+
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,6 +66,15 @@ function Login() {
     <div className="min-h-screen flex">
       {/* Panel izquierdo — branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 relative overflow-hidden flex-col justify-between p-12">
+        {/* Dots background pattern */}
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600 rounded-full opacity-10" />
         <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-violet-600 rounded-full opacity-10" />
         <div className="absolute top-1/3 right-0 w-64 h-64 bg-indigo-500 rounded-full opacity-5 translate-x-1/2" />
@@ -56,16 +92,15 @@ function Login() {
             Organiza tareas, colabora con tu equipo y lleva cada proyecto al siguiente nivel.
           </p>
           <div className="flex flex-col gap-4 pt-4">
-            {[
-              "Gestión de proyectos en tiempo real",
-              "Colaboración con equipos",
-              "Seguimiento de tareas y estados",
-            ].map((text, i) => (
+            {FEATURES.map((feat, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-indigo-500 bg-opacity-20 flex items-center justify-center flex-shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: 'rgba(109,74,254,0.2)' }}
+                >
+                  <span style={{ color: '#a78bfa' }}>{feat.icon}</span>
                 </div>
-                <span className="text-slate-300 text-sm">{text}</span>
+                <span className="text-slate-300 text-sm">{feat.text}</span>
               </div>
             ))}
           </div>
@@ -82,7 +117,7 @@ function Login() {
           <NexoLogo textClass="text-slate-900" />
         </div>
 
-        <div className="w-full max-w-md mx-auto">
+        <div className="w-full max-w-[420px] mx-auto">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-900 mb-2">Bienvenido de vuelta</h2>
             <p className="text-slate-500">Ingresa a tu cuenta para continuar</p>
@@ -99,7 +134,7 @@ function Login() {
                 type="email"
                 id="email"
                 placeholder="tu@ejemplo.com"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 rounded-[10px] border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-[3px] focus:ring-[#6d4afe] focus:border-transparent transition-all"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />
@@ -122,7 +157,7 @@ function Login() {
                   type={showPassword ? "text" : "password"}
                   id="password"
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all pr-12"
+                  className="w-full px-4 py-3 rounded-[10px] border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-[3px] focus:ring-[#6d4afe] focus:border-transparent transition-all pr-12"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                 />
@@ -139,7 +174,7 @@ function Login() {
 
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              className="w-full py-3 px-4 bg-[#6d4afe] text-white font-semibold rounded-[10px] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#6d4afe] focus:ring-offset-2 hover:brightness-110 hover:shadow-[0_4px_20px_rgba(109,74,254,0.4)]"
             >
               Iniciar sesión
             </button>
@@ -160,7 +195,7 @@ function Login() {
 function NexoLogo({ textClass }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+      <div className="w-9 h-9 bg-[#6d4afe] rounded-xl flex items-center justify-center shadow-lg shadow-[#6d4afe]/30">
         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>

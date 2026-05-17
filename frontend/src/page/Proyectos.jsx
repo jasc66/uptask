@@ -24,6 +24,59 @@ const Proyectos = () => {
   )
   const proximasTareas = tareasPendientes.slice(0, 5)
 
+  const hayAlerta = tareasEstaSemana.length > 0
+
+  const statCards = [
+    {
+      label: 'Proyectos',
+      value: proyectos.length,
+      bg: 'bg-blue-50',
+      iconBg: 'bg-blue-100',
+      textColor: 'text-blue-600',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Activos',
+      value: activos,
+      bg: 'bg-emerald-50',
+      iconBg: 'bg-emerald-100',
+      textColor: 'text-emerald-600',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Mis tareas',
+      value: tareasPendientes.length,
+      bg: 'bg-violet-50',
+      iconBg: 'bg-violet-100',
+      textColor: 'text-violet-600',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Vencen esta semana',
+      value: tareasEstaSemana.length,
+      bg: hayAlerta ? 'bg-amber-50' : 'bg-slate-50',
+      iconBg: hayAlerta ? 'bg-amber-100' : 'bg-slate-100',
+      textColor: hayAlerta ? 'text-amber-600' : 'text-slate-500',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+  ]
+
   return (
     <div>
       {/* Heading */}
@@ -52,24 +105,17 @@ const Proyectos = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-          <p className="text-sm text-slate-500">Proyectos</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{proyectos.length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-          <p className="text-sm text-slate-500">Activos</p>
-          <p className="text-3xl font-bold text-indigo-600 mt-1">{activos}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-          <p className="text-sm text-slate-500">Mis tareas</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{tareasPendientes.length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-          <p className="text-sm text-slate-500">Vencen esta semana</p>
-          <p className={`text-3xl font-bold mt-1 ${tareasEstaSemana.length > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
-            {tareasEstaSemana.length}
-          </p>
-        </div>
+        {statCards.map((card, i) => (
+          <div key={i} className={`${card.bg} rounded-xl border border-slate-200 px-5 py-4 flex flex-col gap-3`}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500 font-medium">{card.label}</p>
+              <div className={`${card.iconBg} w-8 h-8 rounded-lg flex items-center justify-center shrink-0`}>
+                <span className={card.textColor}>{card.icon}</span>
+              </div>
+            </div>
+            <p className={`text-3xl font-bold ${card.textColor}`}>{card.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Mis tareas próximas */}
@@ -124,7 +170,7 @@ const Proyectos = () => {
           {/* Card "agregar nuevo" */}
           <button
             onClick={handleModalFormulario}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors min-h-[160px]"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#6d4afe]/30 text-slate-400 hover:border-[#6d4afe]/60 hover:text-[#6d4afe] hover:bg-violet-50/60 transition-all min-h-[160px]"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
