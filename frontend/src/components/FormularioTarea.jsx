@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import useProyectos from '../hooks/useProyectos'
+import useAuth from '../hooks/useAuth'
 import Alerta from './Alerta'
 
 const PRIORIDADES = ['Baja', 'Media', 'Alta']
@@ -18,6 +19,16 @@ const FormularioTarea = () => {
     tareaDetalle, agregarComentario, etiquetasProyecto, crearEtiqueta,
     eliminarEtiqueta, agregarSubtarea, cambiarEstadoSubtarea,
   } = useProyectos()
+  const { auth } = useAuth()
+
+  const creadorProyectoId = proyecto.creador?._id ?? proyecto.creador
+  const puedeAdministrar =
+    auth.rol === 'admin' || creadorProyectoId?.toString() === auth._id?.toString()
+  const esEditorProyecto =
+    puedeAdministrar ||
+    proyecto.colaboradores?.some(
+      c => (c.usuario?._id ?? c.usuario)?.toString() === auth._id?.toString() && c.rol === 'editor'
+    )
 
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -129,8 +140,56 @@ const FormularioTarea = () => {
       day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
     })
 
+  const PRIORIDAD_COLOR = {
+    Alta: 'bg-red-100 text-red-700',
+    Media: 'bg-amber-100 text-amber-700',
+    Baja: 'bg-emerald-100 text-emerald-700',
+  }
+
   return (
     <div>
+      {/* Vista solo-lectura para colaboradores sin permisos de edición */}
+      {!puedeAdministrar && tareaId ? (
+        <div className="space-y-3">
+          {msg && <Alerta alerta={alerta} />}
+          <h2 className="text-base font-semibold text-slate-800">{nombre}</h2>
+          {descripcion && (
+            <p className="text-sm text-slate-600">{descripcion}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {prioridad && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRIORIDAD_COLOR[prioridad] ?? 'bg-slate-100 text-slate-600'}`}>
+                {prioridad}
+              </span>
+            )}
+            {fechaEntrega && (
+              <span className="text-xs text-slate-500">
+                Entrega: {new Date(fechaEntrega).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
+              </span>
+            )}
+            {responsable && participantes.find(p => p._id === responsable) && (
+              <span className="text-xs text-slate-500">
+                Responsable: {participantes.find(p => p._id === responsable)?.nombre}
+              </span>
+            )}
+          </div>
+          {etiquetasSeleccionadas.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {etiquetasProyecto
+                .filter(e => etiquetasSeleccionadas.includes(e._id))
+                .map(e => (
+                  <span
+                    key={e._id}
+                    className="text-xs font-medium px-2 py-0.5 rounded-full text-white"
+                    style={{ backgroundColor: e.color }}
+                  >
+                    {e.nombre}
+                  </span>
+                ))}
+            </div>
+          )}
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         {msg && <Alerta alerta={alerta} />}
 
@@ -299,6 +358,7 @@ const FormularioTarea = () => {
           {tareaId ? 'Guardar cambios' : 'Crear tarea'}
         </button>
       </form>
+      )}
 
       {/* Subtareas — solo al editar */}
       {tareaId && (
@@ -313,13 +373,15 @@ const FormularioTarea = () => {
                 </span>
               )}
             </h3>
-            <button
-              type="button"
-              onClick={() => setMostrarFormSubtarea(v => !v)}
-              className="text-xs text-indigo-500 hover:text-indigo-700"
-            >
-              + Agregar
-            </button>
+            {esEditorProyecto && (
+              <button
+                type="button"
+                onClick={() => setMostrarFormSubtarea(v => !v)}
+                className="text-xs text-indigo-500 hover:text-indigo-700"
+              >
+                + Agregar
+              </button>
+            )}
           </div>
 
           {(tareaDetalle?.subtareas ?? []).length > 0 && (
@@ -353,7 +415,7 @@ const FormularioTarea = () => {
             </ul>
           )}
 
-          {mostrarFormSubtarea && (
+          {esEditorProyecto && mostrarFormSubtarea && (
             <div className="flex gap-2">
               <input
                 type="text"

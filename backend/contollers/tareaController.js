@@ -226,7 +226,7 @@ const agregarSubtarea = async (req, res) => {
     try {
         const tareaParent = await Tarea.findById(id).populate("proyecto");
         if (!tareaParent) return res.status(404).json({ msg: "Tarea no encontrada" });
-        if (!esCreador(tareaParent.proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        if (!esCreador(tareaParent.proyecto, req.usuario._id) && !esEditor(tareaParent.proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
             return res.status(403).json({ msg: "Sin permisos para agregar subtareas" });
         }
 
