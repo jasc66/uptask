@@ -22,7 +22,11 @@ const whiteList = (process.env.FRONTEND_URL || 'http://localhost:5173')
 
 const corsOptions = {
 	origin: function(origin, callback) {
-		if (!origin || whiteList.includes(origin)) {
+		if (!origin) {
+			callback(null, true)
+		} else if (whiteList.includes(origin)) {
+			callback(null, true)
+		} else if (origin.includes('vercel.app') || origin.includes('localhost')) {
 			callback(null, true)
 		} else {
 			callback(new Error(`CORS bloqueado para origen: ${origin}`))
