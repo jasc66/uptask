@@ -23,7 +23,7 @@ export const emailRegistro = async (datos)=> {
         ` <p>Hola: ${nombre} Comprueba tu cuenta en DGSC-Tareas </p>
         <p>Tu cuenta ya esta casi lista, solo debes comprobarla en el siguiente enlace:</p>
         
-        <a href="${process.env.FRONTEND_URL}/confirmar/${token}">Comprobar Cuenta</a>
+        <a href="${(process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim()}/confirmar/${token}">Comprobar Cuenta</a>
 
         <p>Si tu no creaste esta cuenta, puedes ignorar el mensaje</p>
         `
@@ -52,7 +52,7 @@ export const emailOlvidePassword = async (datos)=> {
       ` <p>Hola: ${nombre} has solicitado reestablecer tu password </p>
       <p>Sigue el siguiente enlace para generar un nuevo password:</p>
       
-      <a href="${process.env.FRONTEND_URL}/olvide-password/${token}">Reestablecer Password</a>
+      <a href="${(process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim()}/olvide-password/${token}">Reestablecer Password</a>
 
       <p>Si tu no solicitaste esta email, puedes ignorar el mensaje</p>
       `
