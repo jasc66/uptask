@@ -254,7 +254,7 @@ const Proyecto = () => {
                 )}
               </button>
             )}
-            {puedeAdministrar && (
+            {puedeEditarEstado && (
               <button
                 onClick={handleModalTarea}
                 className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
@@ -344,7 +344,7 @@ const Proyecto = () => {
               </svg>
             </div>
             <p className="text-sm font-medium text-slate-500">Sin tareas en este proyecto</p>
-            {puedeAdministrar && (
+            {puedeEditarEstado && (
               <button
                 onClick={handleModalTarea}
                 className="mt-3 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
@@ -641,7 +641,7 @@ const Proyecto = () => {
       <Colaboradores />
 
       {modalFormularioTarea && (
-        <Modal titulo={puedeAdministrar ? "Tarea" : "Detalle de tarea"} onClose={handleModalTarea}>
+        <Modal titulo={puedeEditarEstado ? "Tarea" : "Detalle de tarea"} onClose={handleModalTarea}>
           <FormularioTarea />
         </Modal>
       )}

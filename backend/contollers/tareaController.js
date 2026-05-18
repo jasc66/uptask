@@ -24,7 +24,7 @@ const agregarTarea = async (req, res) => {
         if (!existeProyecto) {
             return res.status(404).json({ msg: "El proyecto no existe" });
         }
-        if (!esCreador(existeProyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        if (!esCreador(existeProyecto, req.usuario._id) && req.usuario.rol !== 'admin' && !esEditor(existeProyecto, req.usuario._id)) {
             return res.status(403).json({ msg: "No tienes los permisos para añadir tareas" });
         }
 
