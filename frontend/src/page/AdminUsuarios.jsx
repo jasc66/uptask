@@ -119,6 +119,16 @@ const AdminUsuarios = () => {
     }
   }
 
+  const confirmarUsuario = async (usuario) => {
+    try {
+      await clienteAxios.put(`/usuarios/admin/${usuario._id}`, { confirmado: true }, config)
+      mostrarAlerta(`Cuenta de ${usuario.nombre} confirmada`)
+      cargarUsuarios()
+    } catch (error) {
+      mostrarAlerta(error.response?.data?.msg || 'Error al confirmar usuario', true)
+    }
+  }
+
   const totalActivos = usuarios.filter(u => u.activo).length
   const totalAdmins = usuarios.filter(u => u.rol === 'admin').length
 
@@ -172,7 +182,8 @@ const AdminUsuarios = () => {
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Rol</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cuenta</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Activo</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -203,6 +214,27 @@ const AdminUsuarios = () => {
                     }`}>
                       {usuario.rol === 'admin' ? 'Administrador' : 'Usuario'}
                     </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {usuario.confirmado ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Confirmada
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => confirmarUsuario(usuario)}
+                        title="Confirmar cuenta manualmente"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Pendiente
+                      </button>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     <button

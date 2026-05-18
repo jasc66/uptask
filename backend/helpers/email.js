@@ -6,9 +6,11 @@ const frontendUrl = () =>
 export const emailRegistro = async (datos) => {
     const { email, nombre, token } = datos;
 
+    const port = Number(process.env.SMTP_PORT) || 465;
     const transport = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
+        port,
+        secure: port === 465,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
@@ -32,9 +34,11 @@ export const emailRegistro = async (datos) => {
 export const emailOlvidePassword = async (datos) => {
     const { email, nombre, token } = datos;
 
+    const port = Number(process.env.SMTP_PORT) || 465;
     const transport = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
+        port,
+        secure: port === 465,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,

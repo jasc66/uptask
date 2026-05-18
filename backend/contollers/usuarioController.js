@@ -178,11 +178,12 @@ const editarUsuario = async (req, res) => {
 		return res.status(400).json({ msg: 'No puedes desactivarte a ti mismo' });
 	}
 
-	const { nombre, email, rol, activo } = req.body;
+	const { nombre, email, rol, activo, confirmado } = req.body;
 	if (nombre) usuario.nombre = nombre;
 	if (email) usuario.email = email;
 	if (rol) usuario.rol = rol;
 	if (activo !== undefined) usuario.activo = activo;
+	if (confirmado !== undefined) usuario.confirmado = confirmado;
 
 	try {
 		await usuario.save();
