@@ -16,7 +16,7 @@ export const emailRegistro = async (datos) => {
     });
 
     await transport.sendMail({
-        from: '"Nexo - Administrador de Proyectos" <correo@nexo.app>',
+        from: `"Nexo" <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
         to: email,
         subject: "Nexo - Comprueba tu cuenta",
         text: "Comprueba tu cuenta en Nexo",
@@ -42,7 +42,7 @@ export const emailOlvidePassword = async (datos) => {
     });
 
     await transport.sendMail({
-        from: '"Nexo - Administrador de Proyectos" <correo@nexo.app>',
+        from: `"Nexo" <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
         to: email,
         subject: "Nexo - Reestablece tu Password",
         text: "Reestablece tu Password",

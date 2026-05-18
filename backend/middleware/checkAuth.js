@@ -16,6 +16,10 @@ const checkAuth = async (req, res, next) => {
         "-password -confirmado -token -createdAt -updatedAt -__v"
       );
 
+      if (!req.usuario || !req.usuario.activo) {
+        return res.status(403).json({ msg: "Tu cuenta ha sido desactivada" });
+      }
+
       return next();
     } catch (error) {
       return res.status(401).json({ msg: "Token no válido" });

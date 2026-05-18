@@ -58,6 +58,20 @@ const Sidebar = () => {
         </NavLink>
       </nav>
 
+      {/* Admin */}
+      {auth.rol === 'admin' && (
+        <>
+          <hr className="border-white/10 mx-4 my-2" />
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest px-3 mb-1">Administración</p>
+          <NavLink to="/proyectos/admin-usuarios" className={navClass}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-5.196-3.796M9 20H4v-2a4 4 0 015.196-3.796M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Usuarios
+          </NavLink>
+        </>
+      )}
+
       {/* Spacer */}
       <div className="flex-1" />
 
