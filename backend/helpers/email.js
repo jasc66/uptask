@@ -3,19 +3,21 @@ import nodemailer from "nodemailer";
 const frontendUrl = () =>
     (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
 
+const transport = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    }
+});
+
+const from = () => `"Nexo" <${process.env.EMAIL_USER}>`;
+
 export const emailRegistro = async (datos) => {
     const { email, nombre, token } = datos;
 
-    const transport = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        }
-    });
-
     await transport.sendMail({
-        from: `"Nexo" <${process.env.EMAIL_FROM || 'noreply@nexo.com'}>`,
+        from: from(),
         to: email,
         subject: "Nexo - Comprueba tu cuenta",
         text: "Comprueba tu cuenta en Nexo",
@@ -31,16 +33,8 @@ export const emailRegistro = async (datos) => {
 export const emailOlvidePassword = async (datos) => {
     const { email, nombre, token } = datos;
 
-    const transport = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        }
-    });
-
     await transport.sendMail({
-        from: `"Nexo" <${process.env.EMAIL_FROM || 'noreply@nexo.com'}>`,
+        from: from(),
         to: email,
         subject: "Nexo - Reestablece tu Password",
         text: "Reestablece tu Password",

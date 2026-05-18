@@ -15,7 +15,7 @@ const registrar = async (req, res) => {
 		const usuario = new Usuario(req.body);
 		usuario.token = generarId();
 		await usuario.save();
-		emailRegistro({
+		await emailRegistro({
 			email: usuario.email,
 			nombre: usuario.nombre,
 			token: usuario.token
@@ -89,7 +89,7 @@ const olvidePassword = async (req, res) => {
 	try {
 		usuario.token = generarId();
 		await usuario.save();
-		emailOlvidePassword({
+		await emailOlvidePassword({
 			email: usuario.email,
 			nombre: usuario.nombre,
 			token: usuario.token

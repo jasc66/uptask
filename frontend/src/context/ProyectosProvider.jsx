@@ -1,9 +1,12 @@
-import { useState, useEffect, createContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import clienteAxios from "../config/clienteAxios";
+import AuthContext from "./AuthProvider";
 
 const ProyectoContext = createContext();
 
 const ProyectosProvider = ({children}) => {
+
+    const { auth } = useContext(AuthContext)
 
     const [proyectos, setProyectos] = useState([])
     const [alerta, setAlerta] = useState({})
@@ -18,6 +21,12 @@ const ProyectosProvider = ({children}) => {
     const [etiquetasProyecto, setEtiquetasProyecto] = useState([])
 
     useEffect(()=>{
+        if (!auth?._id) {
+            setProyectos([])
+            setMisTareas([])
+            return
+        }
+
         const token = localStorage.getItem('token')
         if(!token) return
         const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
@@ -42,7 +51,7 @@ const ProyectosProvider = ({children}) => {
 
         obtenerProyectos()
         cargarMisTareas()
-    }, [])
+    }, [auth?._id])
 
     const mostrarAlerta = alerta => {
         setAlerta(alerta)
