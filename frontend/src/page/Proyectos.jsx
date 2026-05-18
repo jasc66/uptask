@@ -80,9 +80,9 @@ const Proyectos = () => {
   return (
     <div>
       {/* Heading */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2.5">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2.5">
             Dashboard
             {auth.rol === 'admin' && (
               <span className="text-xs font-semibold px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full">
@@ -94,7 +94,7 @@ const Proyectos = () => {
         </div>
         <button
           onClick={handleModalFormulario}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -106,7 +106,7 @@ const Proyectos = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {statCards.map((card, i) => (
-          <div key={i} className={`${card.bg} rounded-xl border border-slate-200 px-5 py-4 flex flex-col gap-3`}>
+          <div key={i} className={`${card.bg} rounded-xl border border-slate-200 px-3 py-3 sm:px-5 sm:py-4 flex flex-col gap-3`}>
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-500 font-medium">{card.label}</p>
               <div className={`${card.iconBg} w-8 h-8 rounded-lg flex items-center justify-center shrink-0`}>
