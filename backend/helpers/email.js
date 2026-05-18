@@ -6,19 +6,16 @@ const frontendUrl = () =>
 export const emailRegistro = async (datos) => {
     const { email, nombre, token } = datos;
 
-    const port = Number(process.env.SMTP_PORT) || 465;
     const transport = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port,
-        secure: port === 465,
+        service: "gmail",
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
         }
     });
 
     await transport.sendMail({
-        from: `"Nexo" <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+        from: `"Nexo" <${process.env.EMAIL_FROM || 'noreply@nexo.com'}>`,
         to: email,
         subject: "Nexo - Comprueba tu cuenta",
         text: "Comprueba tu cuenta en Nexo",
@@ -34,19 +31,16 @@ export const emailRegistro = async (datos) => {
 export const emailOlvidePassword = async (datos) => {
     const { email, nombre, token } = datos;
 
-    const port = Number(process.env.SMTP_PORT) || 465;
     const transport = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port,
-        secure: port === 465,
+        service: "gmail",
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
         }
     });
 
     await transport.sendMail({
-        from: `"Nexo" <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+        from: `"Nexo" <${process.env.EMAIL_FROM || 'noreply@nexo.com'}>`,
         to: email,
         subject: "Nexo - Reestablece tu Password",
         text: "Reestablece tu Password",
