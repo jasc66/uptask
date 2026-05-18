@@ -1,31 +1,19 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const frontendUrl = () =>
     (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
 
-const transport = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-});
-
-const from = () => `"Nexo" <${process.env.EMAIL_USER}>`;
+const FROM = 'Nexo <onboarding@resend.dev>';
 
 export const emailRegistro = async (datos) => {
     const { email, nombre, token } = datos;
 
-    await transport.sendMail({
-        from: from(),
+    await resend.emails.send({
+        from: FROM,
         to: email,
         subject: "Nexo - Comprueba tu cuenta",
-        text: "Comprueba tu cuenta en Nexo",
         html: `
             <p>Hola ${nombre}, comprueba tu cuenta en Nexo</p>
             <p>Tu cuenta ya está casi lista, solo debes confirmarla en el siguiente enlace:</p>
@@ -38,11 +26,10 @@ export const emailRegistro = async (datos) => {
 export const emailOlvidePassword = async (datos) => {
     const { email, nombre, token } = datos;
 
-    await transport.sendMail({
-        from: from(),
+    await resend.emails.send({
+        from: FROM,
         to: email,
         subject: "Nexo - Reestablece tu Password",
-        text: "Reestablece tu Password",
         html: `
             <p>Hola ${nombre}, has solicitado reestablecer tu password</p>
             <p>Sigue el siguiente enlace para generar un nuevo password:</p>
