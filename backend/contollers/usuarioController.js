@@ -15,16 +15,21 @@ const registrar = async (req, res) => {
 		const usuario = new Usuario(req.body);
 		usuario.token = generarId();
 		await usuario.save();
-		await emailRegistro({
-			email: usuario.email,
-			nombre: usuario.nombre,
-			token: usuario.token
-		})
+		try {
+			await emailRegistro({
+				email: usuario.email,
+				nombre: usuario.nombre,
+				token: usuario.token
+			})
+		} catch (emailError) {
+			console.log('Error enviando email de registro:', emailError)
+		}
 		res.json({
 			msg: 'Usuario Creado Correctamente, Revisa tu Email para confirmar tu cuenta'
 		})
 	} catch (error) {
 		console.log(error);
+		res.status(500).json({ msg: 'Error al crear el usuario' })
 	}
 };
 
@@ -89,14 +94,19 @@ const olvidePassword = async (req, res) => {
 	try {
 		usuario.token = generarId();
 		await usuario.save();
-		await emailOlvidePassword({
-			email: usuario.email,
-			nombre: usuario.nombre,
-			token: usuario.token
-		})
+		try {
+			await emailOlvidePassword({
+				email: usuario.email,
+				nombre: usuario.nombre,
+				token: usuario.token
+			})
+		} catch (emailError) {
+			console.log('Error enviando email de password:', emailError)
+		}
 		res.json({msg: "Hemos enviado un email con las instrucciones"});
 	} catch (error) {
 		console.log(error)
+		res.status(500).json({ msg: 'Error al procesar la solicitud' })
 	}
 }
 

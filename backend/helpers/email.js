@@ -4,11 +4,16 @@ const frontendUrl = () =>
     (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
 
 const transport = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
-    }
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
 });
 
 const from = () => `"Nexo" <${process.env.EMAIL_USER}>`;

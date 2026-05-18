@@ -1,8 +1,7 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import clienteAxios from "../config/clienteAxios";
 import AuthContext from "./AuthProvider";
-
-const ProyectoContext = createContext();
+import ProyectoContext from "./ProyectoContext";
 
 const ProyectosProvider = ({children}) => {
 
@@ -407,8 +406,4 @@ const ProyectosProvider = ({children}) => {
     )
 }
 
-export {
-    ProyectosProvider
-}
-
-export default ProyectoContext
+export { ProyectosProvider }
