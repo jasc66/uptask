@@ -1,6 +1,8 @@
 import Proyecto from "../models/Proyecto.js";
 import Usuario from "../models/Usuario.js";
 import Etiqueta from "../models/Etiqueta.js";
+import Seccion from "../models/Seccion.js";
+import Tarea from "../models/Tarea.js";
 
 // --- helpers de permisos ---
 // Soportan creador/usuario como ObjectId (sin populate) o Document (con populate)
@@ -61,6 +63,7 @@ const obtenerProyecto = async (req, res) => {
                 { path: "responsable", select: "nombre email" },
                 { path: "etiquetas", select: "nombre color" },
                 { path: "subtareas", select: "nombre estado" },
+                { path: "seccion", select: "nombre color" },
             ],
         })
         .populate("colaboradores.usuario", "nombre email")
@@ -220,6 +223,98 @@ const eliminarEtiqueta = async (req, res) => {
     }
 };
 
+const obtenerSecciones = async (req, res) => {
+    const { id } = req.params;
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!tieneAcceso(proyecto, req.usuario)) return res.status(401).json({ msg: "Acción No Válida" });
+
+    const secciones = await Seccion.find({ proyecto: id }).sort('orden');
+    res.json(secciones);
+};
+
+const crearSeccion = async (req, res) => {
+    const { id } = req.params;
+    const { nombre, color } = req.body;
+
+    if (!nombre?.trim()) return res.status(400).json({ msg: "El nombre es obligatorio" });
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Sin permisos para crear secciones" });
+    }
+
+    const count = await Seccion.countDocuments({ proyecto: id });
+    const seccion = await Seccion.create({
+        nombre: nombre.trim(),
+        color: color || '#94a3b8',
+        orden: count,
+        proyecto: id,
+    });
+    res.json(seccion);
+};
+
+const actualizarSeccion = async (req, res) => {
+    const { id, seccionId } = req.params;
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Sin permisos" });
+    }
+
+    const seccion = await Seccion.findById(seccionId);
+    if (!seccion || seccion.proyecto.toString() !== id) {
+        return res.status(404).json({ msg: "Sección no encontrada" });
+    }
+
+    if (req.body.nombre?.trim()) seccion.nombre = req.body.nombre.trim();
+    if (req.body.color) seccion.color = req.body.color;
+    if (req.body.orden !== undefined) seccion.orden = req.body.orden;
+    await seccion.save();
+    res.json(seccion);
+};
+
+const eliminarSeccion = async (req, res) => {
+    const { id, seccionId } = req.params;
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Sin permisos" });
+    }
+
+    const seccion = await Seccion.findById(seccionId);
+    if (!seccion || seccion.proyecto.toString() !== id) {
+        return res.status(404).json({ msg: "Sección no encontrada" });
+    }
+
+    await Tarea.updateMany({ seccion: seccionId }, { $set: { seccion: null } });
+    await seccion.deleteOne();
+    res.json({ msg: "Sección eliminada" });
+};
+
+const reordenarSecciones = async (req, res) => {
+    const { id } = req.params;
+    const { orden } = req.body;
+
+    if (!Array.isArray(orden)) return res.status(400).json({ msg: "orden debe ser un array de IDs" });
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Sin permisos" });
+    }
+
+    await Promise.all(orden.map((secId, idx) =>
+        Seccion.findByIdAndUpdate(secId, { orden: idx })
+    ));
+
+    const secciones = await Seccion.find({ proyecto: id }).sort('orden');
+    res.json(secciones);
+};
+
 export {
     obtenerProyectos,
     obtenerProyecto,
@@ -231,4 +326,9 @@ export {
     obtenerEtiquetas,
     crearEtiqueta,
     eliminarEtiqueta,
+    obtenerSecciones,
+    crearSeccion,
+    actualizarSeccion,
+    eliminarSeccion,
+    reordenarSecciones,
 };

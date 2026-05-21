@@ -50,6 +50,7 @@ const tareaSchema = mongoose.Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "Proyecto"
 	},
+	seccion: { type: mongoose.Schema.Types.ObjectId, ref: 'Seccion', default: null },
 	etiquetas: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Etiqueta' }],
 	tareaPadre: { type: mongoose.Schema.Types.ObjectId, ref: 'Tarea', default: null },
 	subtareas: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tarea' }],

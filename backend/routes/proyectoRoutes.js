@@ -10,6 +10,11 @@ import {
     obtenerEtiquetas,
     crearEtiqueta,
     eliminarEtiqueta,
+    obtenerSecciones,
+    crearSeccion,
+    actualizarSeccion,
+    eliminarSeccion,
+    reordenarSecciones,
 } from "../contollers/proyectoController.js";
 import checkAuth from "../middleware/checkAuth.js";
 
@@ -33,5 +38,13 @@ router.route('/:id/etiquetas')
     .get(checkAuth, obtenerEtiquetas)
     .post(checkAuth, crearEtiqueta)
 router.delete('/:id/etiquetas/:etiquetaId', checkAuth, eliminarEtiqueta)
+
+router.route('/:id/secciones')
+    .get(checkAuth, obtenerSecciones)
+    .post(checkAuth, crearSeccion)
+router.put('/:id/secciones/reordenar', checkAuth, reordenarSecciones)
+router.route('/:id/secciones/:seccionId')
+    .put(checkAuth, actualizarSeccion)
+    .delete(checkAuth, eliminarSeccion)
 
 export default router;

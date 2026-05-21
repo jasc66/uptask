@@ -8,6 +8,7 @@ import {
 	agregarComentario,
 	obtenerMisTareas,
 	agregarSubtarea,
+	moverSeccion,
 } from "../contollers/tareaController.js";
 import checkAuth from "../middleware/checkAuth.js";
 
@@ -24,5 +25,6 @@ router
 router.post("/estado/:id", checkAuth, cambiarEstado);
 router.post("/comentario/:id", checkAuth, agregarComentario);
 router.post("/subtarea/:id", checkAuth, agregarSubtarea);
+router.post("/mover-seccion/:id", checkAuth, moverSeccion);
 
 export default router;

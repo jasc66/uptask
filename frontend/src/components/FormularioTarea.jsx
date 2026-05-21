@@ -17,7 +17,7 @@ const FormularioTarea = () => {
   const {
     submitTarea, alerta, mostrarAlerta, tareaEditar, proyecto,
     tareaDetalle, agregarComentario, etiquetasProyecto, crearEtiqueta,
-    eliminarEtiqueta, agregarSubtarea, cambiarEstadoSubtarea,
+    eliminarEtiqueta, agregarSubtarea, cambiarEstadoSubtarea, secciones,
   } = useProyectos()
   const { auth } = useAuth()
 
@@ -41,6 +41,7 @@ const FormularioTarea = () => {
   const [tiempoReal, setTiempoReal] = useState('')
   const [comentario, setComentario] = useState('')
   const [enviandoComentario, setEnviandoComentario] = useState(false)
+  const [seccionId, setSeccionId] = useState('')
   const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState([])
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState({ nombre: '', color: '#6366f1' })
   const [mostrarFormEtiqueta, setMostrarFormEtiqueta] = useState(false)
@@ -61,6 +62,7 @@ const FormularioTarea = () => {
       )
       setTiempoEstimado(tareaEditar.tiempoEstimado ?? '')
       setTiempoReal(tareaEditar.tiempoReal ?? '')
+      setSeccionId(tareaEditar.seccion?._id ?? tareaEditar.seccion ?? '')
     } else {
       setNombre('')
       setDescripcion('')
@@ -72,6 +74,7 @@ const FormularioTarea = () => {
       setEtiquetasSeleccionadas([])
       setTiempoEstimado('')
       setTiempoReal('')
+      setSeccionId('')
     }
     setMostrarFormEtiqueta(false)
     setMostrarFormSubtarea(false)
@@ -98,6 +101,7 @@ const FormularioTarea = () => {
       etiquetas: etiquetasSeleccionadas,
       tiempoEstimado: tiempoEstimado !== '' ? Number(tiempoEstimado) : null,
       tiempoReal: tiempoReal !== '' ? Number(tiempoReal) : null,
+      seccion: seccionId || null,
     })
   }
 
@@ -322,6 +326,26 @@ const FormularioTarea = () => {
               <option value="">— Sin asignar —</option>
               {participantes.map(p => (
                 <option key={p._id} value={p._id}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Sección */}
+        {secciones?.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="seccion">
+              Sección (tablero)
+            </label>
+            <select
+              id="seccion"
+              value={seccionId}
+              onChange={e => setSeccionId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">— Sin sección —</option>
+              {secciones.map(s => (
+                <option key={s._id} value={s._id}>{s.nombre}</option>
               ))}
             </select>
           </div>

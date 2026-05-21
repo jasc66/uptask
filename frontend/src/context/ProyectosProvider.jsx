@@ -18,6 +18,7 @@ const ProyectosProvider = ({children}) => {
     const [tareaDetalle, setTareaDetalle] = useState(null)
     const [misTareas, setMisTareas] = useState([])
     const [etiquetasProyecto, setEtiquetasProyecto] = useState([])
+    const [secciones, setSecciones] = useState([])
     const prevAuthId = useRef(undefined)
 
     useEffect(()=>{
@@ -232,12 +233,14 @@ const ProyectosProvider = ({children}) => {
                     Authorization: `Bearer ${token}`
                 }
             }
-            const {data} = await clienteAxios(`/proyectos/${id}`, config)
-            const {proyecto} = data
-            setProyecto(proyecto)
-
-            const { data: etiquetas } = await clienteAxios(`/proyectos/${id}/etiquetas`, config)
+            const [{ data }, { data: etiquetas }, { data: seccionesData }] = await Promise.all([
+                clienteAxios(`/proyectos/${id}`, config),
+                clienteAxios(`/proyectos/${id}/etiquetas`, config),
+                clienteAxios(`/proyectos/${id}/secciones`, config),
+            ])
+            setProyecto(data.proyecto)
             setEtiquetasProyecto(etiquetas)
+            setSecciones(seccionesData)
         } catch (error) {
             console.log(error)
         }finally {
@@ -348,6 +351,100 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    const crearSeccion = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/secciones`, datos, config)
+            setSecciones(prev => [...prev, data])
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear sección', error: true })
+        }
+    }
+
+    const actualizarSeccion = async (proyectoId, seccionId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/proyectos/${proyectoId}/secciones/${seccionId}`, datos, config)
+            setSecciones(prev => prev.map(s => s._id === seccionId ? data : s))
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar sección', error: true })
+        }
+    }
+
+    const eliminarSeccion = async (proyectoId, seccionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/proyectos/${proyectoId}/secciones/${seccionId}`, config)
+            setSecciones(prev => prev.filter(s => s._id !== seccionId))
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t =>
+                    (t.seccion?._id ?? t.seccion) === seccionId ? { ...t, seccion: null } : t
+                )
+            }))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar sección', error: true })
+        }
+    }
+
+    const reordenarSecciones = async (proyectoId, orden) => {
+        setSecciones(prev => {
+            const mapa = Object.fromEntries(prev.map(s => [s._id, s]))
+            return orden.map((id, idx) => ({ ...mapa[id], orden: idx })).filter(Boolean)
+        })
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/proyectos/${proyectoId}/secciones/reordenar`, { orden }, config)
+            setSecciones(data)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const actualizarFechaTarea = async (tareaId, fechaEntrega) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/tareas/${tareaId}`, { fechaEntrega }, config)
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t => t._id === data._id ? { ...t, fechaEntrega: data.fechaEntrega } : t)
+            }))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar la fecha', error: true })
+        }
+    }
+
+    const moverTareaASeccion = async (tareaId, seccionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            await clienteAxios.post(`/tareas/mover-seccion/${tareaId}`, { seccionId: seccionId || null }, config)
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t =>
+                    t._id === tareaId
+                        ? { ...t, seccion: seccionId ? { _id: seccionId } : null }
+                        : t
+                )
+            }))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al mover la tarea', error: true })
+        }
+    }
+
     const agregarColaborador = async (proyectoId, datos) => {
         try {
             const token = localStorage.getItem('token')
@@ -408,6 +505,14 @@ const ProyectosProvider = ({children}) => {
                 eliminarEtiqueta,
                 agregarSubtarea,
                 cambiarEstadoSubtarea,
+                secciones,
+                setSecciones,
+                crearSeccion,
+                actualizarSeccion,
+                eliminarSeccion,
+                reordenarSecciones,
+                moverTareaASeccion,
+                actualizarFechaTarea,
             }}
             >{children}
 

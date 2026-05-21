@@ -1,5 +1,6 @@
 import Proyecto from "../models/Proyecto.js";
 import Tarea from "../models/Tarea.js";
+import Seccion from "../models/Seccion.js";
 import { emitirEventoTarea } from "../socket.js";
 
 // --- helpers de permisos ---
@@ -29,12 +30,13 @@ const agregarTarea = async (req, res) => {
             return res.status(403).json({ msg: "No tienes los permisos para añadir tareas" });
         }
 
-        const { etiquetas, tiempoEstimado, tiempoReal } = req.body;
+        const { etiquetas, tiempoEstimado, tiempoReal, seccion } = req.body;
         const tareaAlmacenada = await Tarea.create({
             nombre, descripcion, prioridad, fechaInicio, fechaEntrega, responsable, proyecto,
             ...(etiquetas?.length ? { etiquetas } : {}),
             ...(tiempoEstimado != null ? { tiempoEstimado } : {}),
             ...(tiempoReal != null ? { tiempoReal } : {}),
+            ...(seccion ? { seccion } : {}),
         });
         await Proyecto.findByIdAndUpdate(existeProyecto._id, {
             $push: { tareas: tareaAlmacenada._id },
@@ -95,6 +97,7 @@ const actualizarTarea = async (req, res) => {
         if (req.body.etiquetas !== undefined) tarea.etiquetas = req.body.etiquetas;
         if (req.body.tiempoEstimado !== undefined) tarea.tiempoEstimado = req.body.tiempoEstimado;
         if (req.body.tiempoReal !== undefined) tarea.tiempoReal = req.body.tiempoReal;
+        if (req.body.seccion !== undefined) tarea.seccion = req.body.seccion || null;
 
         if (req.body.responsable && req.body.responsable !== responsableAnterior) {
             tarea.actividad.push({
@@ -273,6 +276,39 @@ const agregarSubtarea = async (req, res) => {
     }
 };
 
+const moverSeccion = async (req, res) => {
+    const { id } = req.params;
+    const { seccionId } = req.body;
+
+    try {
+        const tarea = await Tarea.findById(id).populate("proyecto");
+        if (!tarea) return res.status(404).json({ msg: "Tarea no encontrada" });
+
+        const proyecto = tarea.proyecto;
+        const puedeModificar =
+            req.usuario.rol === 'admin' ||
+            esCreador(proyecto, req.usuario._id) ||
+            esEditor(proyecto, req.usuario._id);
+
+        if (!puedeModificar) return res.status(403).json({ msg: "Sin permisos para mover la tarea" });
+
+        if (seccionId) {
+            const seccion = await Seccion.findById(seccionId);
+            if (!seccion || seccion.proyecto.toString() !== proyecto._id.toString()) {
+                return res.status(400).json({ msg: "Sección no válida para este proyecto" });
+            }
+        }
+
+        tarea.seccion = seccionId || null;
+        await tarea.save();
+        emitirEventoTarea(proyecto, 'actualizada', { tareaId: tarea._id, proyectoId: proyecto._id });
+        res.json({ _id: tarea._id, seccion: tarea.seccion });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: error.message });
+    }
+};
+
 export {
     agregarTarea,
     obtenerTarea,
@@ -282,4 +318,5 @@ export {
     agregarComentario,
     obtenerMisTareas,
     agregarSubtarea,
+    moverSeccion,
 };
