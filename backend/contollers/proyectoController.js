@@ -92,6 +92,9 @@ const editarProyecto = async (req, res) => {
     proyecto.fechaEntrega = req.body.fechaEntrega || proyecto.fechaEntrega;
     proyecto.cliente = req.body.cliente || proyecto.cliente;
     proyecto.color = req.body.color || proyecto.color;
+    if (req.body.estado !== undefined) proyecto.estado = req.body.estado;
+    if (req.body.fechaInicio !== undefined) proyecto.fechaInicio = req.body.fechaInicio;
+    if (req.body.area !== undefined) proyecto.area = req.body.area;
 
     try {
         const proyectoAlmacenado = await proyecto.save();

@@ -32,7 +32,19 @@ const tareaSchema = mongoose.Schema({
 	prioridad: {
 		type: String,
 		required: true,
-		enum: ["Baja", "Media", "Alta"],
+		enum: ["Baja", "Media", "Alta", "Urgente"],
+	},
+	tiempoEstimado: {
+		type: Number,
+		default: null,
+	},
+	tiempoReal: {
+		type: Number,
+		default: null,
+	},
+	completadaEn: {
+		type: Date,
+		default: null,
 	},
 	proyecto: {
 		type: mongoose.Schema.Types.ObjectId,

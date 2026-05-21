@@ -14,6 +14,9 @@ import Proyecto from "./page/Proyecto";
 import EditarProyecto from "./page/EditarProyecto";
 import MisTareas from "./page/MisTareas";
 import AdminUsuarios from "./page/AdminUsuarios";
+import Reportes from "./page/Reportes";
+import ReportesProyecto from "./page/ReportesProyecto";
+import ReportesUsuario from "./page/ReportesUsuario";
 
 import { AuthProvider } from "./context/AuthProvider";
 import { ProyectosProvider } from "./context/ProyectosProvider";
@@ -42,6 +45,9 @@ function App() {
               <Route path=":id" element={<Proyecto />} />
               <Route path="editar/:id" element={<EditarProyecto />} />
               <Route path="admin-usuarios" element={<AdminUsuarios />} />
+              <Route path="reportes" element={<Reportes />} />
+              <Route path="reportes/proyecto/:id" element={<ReportesProyecto />} />
+              <Route path="reportes/usuario/:id" element={<ReportesUsuario />} />
             </Route>
           </Routes>
         </ProyectosProvider>

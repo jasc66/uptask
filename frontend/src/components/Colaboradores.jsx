@@ -3,6 +3,7 @@ import useProyectos from '../hooks/useProyectos'
 import useAuth from '../hooks/useAuth'
 
 const ROL_COLOR = {
+  admin:  'bg-violet-100 text-violet-700',
   editor: 'bg-indigo-100 text-indigo-700',
   lector: 'bg-slate-100 text-slate-600',
 }
@@ -101,6 +102,7 @@ const Colaboradores = () => {
             >
               <option value="editor">Editor</option>
               <option value="lector">Lector</option>
+              <option value="admin">Admin</option>
             </select>
             <button
               type="submit"

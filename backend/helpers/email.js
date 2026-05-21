@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 const frontendUrl = () =>
     (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
@@ -10,7 +10,7 @@ const FROM = 'Nexo <onboarding@resend.dev>';
 export const emailRegistro = async (datos) => {
     const { email, nombre, token } = datos;
 
-    await resend.emails.send({
+    await getResend().emails.send({
         from: FROM,
         to: email,
         subject: "Nexo - Comprueba tu cuenta",
@@ -26,7 +26,7 @@ export const emailRegistro = async (datos) => {
 export const emailOlvidePassword = async (datos) => {
     const { email, nombre, token } = datos;
 
-    await resend.emails.send({
+    await getResend().emails.send({
         from: FROM,
         to: email,
         subject: "Nexo - Reestablece tu Password",

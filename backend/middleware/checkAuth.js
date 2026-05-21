@@ -16,7 +16,7 @@ const checkAuth = async (req, res, next) => {
         "-password -confirmado -token -createdAt -updatedAt -__v"
       );
 
-      if (!req.usuario || !req.usuario.activo) {
+      if (!req.usuario || req.usuario.activo === false) {
         return res.status(403).json({ msg: "Tu cuenta ha sido desactivada" });
       }
 

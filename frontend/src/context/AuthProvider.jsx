@@ -29,8 +29,10 @@ const AuthProvider = ({children}) => {
             try {
                 const { data } = await clienteAxios('/usuarios/perfil', config)
                 setAuth(data)
-                navigate('/proyectos')
-
+                // Solo redirigir si está en una ruta de auth (login/registro), no desde rutas protegidas
+                if (window.location.pathname === '/' || window.location.pathname.startsWith('/olvide') || window.location.pathname.startsWith('/registrar') || window.location.pathname.startsWith('/confirmar')) {
+                    navigate('/proyectos')
+                }
             } catch (error) {
                 setAuth({})
             }

@@ -1,5 +1,6 @@
 import Proyecto from "../models/Proyecto.js";
 import Tarea from "../models/Tarea.js";
+import { emitirEventoTarea } from "../socket.js";
 
 // --- helpers de permisos ---
 const esCreador = (proyecto, usuarioId) =>
@@ -7,7 +8,7 @@ const esCreador = (proyecto, usuarioId) =>
 
 const esEditor = (proyecto, usuarioId) =>
     proyecto.colaboradores.some(
-        c => c.usuario.toString() === usuarioId.toString() && c.rol === 'editor'
+        c => c.usuario.toString() === usuarioId.toString() && (c.rol === 'editor' || c.rol === 'admin')
     );
 
 const tieneAcceso = (proyecto, usuario) =>
@@ -28,14 +29,17 @@ const agregarTarea = async (req, res) => {
             return res.status(403).json({ msg: "No tienes los permisos para añadir tareas" });
         }
 
-        const { etiquetas } = req.body;
+        const { etiquetas, tiempoEstimado, tiempoReal } = req.body;
         const tareaAlmacenada = await Tarea.create({
             nombre, descripcion, prioridad, fechaInicio, fechaEntrega, responsable, proyecto,
             ...(etiquetas?.length ? { etiquetas } : {}),
+            ...(tiempoEstimado != null ? { tiempoEstimado } : {}),
+            ...(tiempoReal != null ? { tiempoReal } : {}),
         });
         await Proyecto.findByIdAndUpdate(existeProyecto._id, {
             $push: { tareas: tareaAlmacenada._id },
         });
+        emitirEventoTarea(existeProyecto, 'nueva', { tareaId: tareaAlmacenada._id, proyectoId: existeProyecto._id });
         res.json(tareaAlmacenada);
     } catch (error) {
         console.log(error);
@@ -89,6 +93,8 @@ const actualizarTarea = async (req, res) => {
         tarea.fechaEntrega = req.body.fechaEntrega || tarea.fechaEntrega;
         tarea.responsable = req.body.responsable || tarea.responsable;
         if (req.body.etiquetas !== undefined) tarea.etiquetas = req.body.etiquetas;
+        if (req.body.tiempoEstimado !== undefined) tarea.tiempoEstimado = req.body.tiempoEstimado;
+        if (req.body.tiempoReal !== undefined) tarea.tiempoReal = req.body.tiempoReal;
 
         if (req.body.responsable && req.body.responsable !== responsableAnterior) {
             tarea.actividad.push({
@@ -99,6 +105,7 @@ const actualizarTarea = async (req, res) => {
         }
 
         const tareaAlmacenada = await tarea.save();
+        emitirEventoTarea(tarea.proyecto, 'actualizada', { tareaId: tarea._id, proyectoId: tarea.proyecto._id });
         res.json(tareaAlmacenada);
     } catch (error) {
         console.log(error);
@@ -118,10 +125,12 @@ const eliminarTarea = async (req, res) => {
             return res.status(403).json({ msg: "Acción No Válida" });
         }
 
-        await Proyecto.findByIdAndUpdate(tarea.proyecto._id, {
+        const proyectoRef = tarea.proyecto;
+        await Proyecto.findByIdAndUpdate(proyectoRef._id, {
             $pull: { tareas: tarea._id },
         });
         await tarea.deleteOne();
+        emitirEventoTarea(proyectoRef, 'eliminada', { tareaId: tarea._id, proyectoId: proyectoRef._id });
         res.json({ msg: "Tarea Eliminada" });
     } catch (error) {
         console.log(error);
@@ -155,12 +164,14 @@ const cambiarEstado = async (req, res) => {
         }
 
         tarea.estado = estado;
+        tarea.completadaEn = estado === 'Completada' ? new Date() : null;
         tarea.actividad.push({
             usuario: req.usuario._id,
             tipo: 'cambio_estado',
             contenido: `Cambió el estado a "${estado}"`,
         });
         const tareaActualizada = await tarea.save();
+        emitirEventoTarea(tarea.proyecto, 'estado', { tareaId: tarea._id, proyectoId: tarea.proyecto._id, estado });
         res.json(tareaActualizada);
     } catch (error) {
         console.log(error);
@@ -170,10 +181,23 @@ const cambiarEstado = async (req, res) => {
 
 const obtenerMisTareas = async (req, res) => {
     try {
-        const tareas = await Tarea.find({ responsable: req.usuario._id })
+        const proyectos = await Proyecto.find({
+            $or: [
+                { creador: req.usuario._id },
+                { 'colaboradores.usuario': req.usuario._id },
+            ]
+        }, '_id').lean()
+
+        const proyectosIds = proyectos.map(p => p._id)
+
+        const tareas = await Tarea.find({
+            proyecto: { $in: proyectosIds },
+            tareaPadre: null,
+        })
             .populate('proyecto', 'nombre color')
             .sort({ fechaEntrega: 1 })
             .lean()
+
         res.json(tareas)
     } catch (error) {
         console.log(error)

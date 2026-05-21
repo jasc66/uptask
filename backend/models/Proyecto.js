@@ -39,7 +39,7 @@ const proyectosSchema = mongoose.Schema(
         },
         rol: {
           type: String,
-          enum: ["editor", "lector"],
+          enum: ["editor", "lector", "admin"],
           default: "editor",
         },
       },
@@ -47,6 +47,20 @@ const proyectosSchema = mongoose.Schema(
     color: {
       type: String,
       default: '#6366f1',
+    },
+    estado: {
+      type: String,
+      enum: ['Activo', 'Pausado', 'Completado', 'Cancelado'],
+      default: 'Activo',
+    },
+    fechaInicio: {
+      type: Date,
+      default: null,
+    },
+    area: {
+      type: String,
+      trim: true,
+      default: null,
     },
   },
   {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import clienteAxios from "../config/clienteAxios";
 import AuthContext from "./AuthProvider";
 import ProyectoContext from "./ProyectoContext";
@@ -18,13 +18,22 @@ const ProyectosProvider = ({children}) => {
     const [tareaDetalle, setTareaDetalle] = useState(null)
     const [misTareas, setMisTareas] = useState([])
     const [etiquetasProyecto, setEtiquetasProyecto] = useState([])
+    const prevAuthId = useRef(undefined)
 
     useEffect(()=>{
-        if (!auth?._id) {
+        const currentId = auth?._id
+        const previousId = prevAuthId.current
+        prevAuthId.current = currentId
+
+        // Logout: was authenticated, now isn't — clear all state
+        if (previousId && !currentId) {
             setProyectos([])
             setMisTareas([])
+            setProyecto({})
             return
         }
+
+        if (!currentId) return
 
         const token = localStorage.getItem('token')
         if(!token) return

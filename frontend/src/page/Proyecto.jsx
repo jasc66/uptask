@@ -6,6 +6,7 @@ import Modal from "../components/Modal"
 import FormularioTarea from "../components/FormularioTarea"
 import Colaboradores from "../components/Colaboradores"
 import Alerta from "../components/Alerta"
+import ReportesProyecto from "./ReportesProyecto"
 
 const PRIORIDAD_COLOR = {
   Alta: 'bg-red-100 text-red-700',
@@ -53,7 +54,7 @@ const Proyecto = () => {
   const { auth } = useAuth()
 
   const [seccionesColapsadas, setSeccionesColapsadas] = useState({})
-  const [vistaTablero, setVistaTablero] = useState(false)
+  const [vista, setVista] = useState('lista')
   const [dragTareaId, setDragTareaId] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
   const [filtroEstados, setFiltroEstados] = useState([])
@@ -73,7 +74,7 @@ const Proyecto = () => {
   const puedeEditarEstado =
     puedeAdministrar ||
     proyecto.colaboradores?.some(
-      c => colaboradorId(c)?.toString() === auth._id?.toString() && c.rol === 'editor'
+      c => colaboradorId(c)?.toString() === auth._id?.toString() && (c.rol === 'editor' || c.rol === 'admin')
     )
   const puedeVerDetalle =
     puedeAdministrar ||
@@ -203,18 +204,18 @@ const Proyecto = () => {
       </div>
 
       {/* Tareas */}
-      <div className={vistaTablero ? '' : 'bg-white rounded-xl border border-slate-200 p-6'}>
+      <div className={vista === 'tablero' || vista === 'reportes' ? '' : 'bg-white rounded-xl border border-slate-200 p-6'}>
 
         {/* Barra de controles */}
-        <div className={`flex items-center justify-between mb-4 ${vistaTablero ? 'bg-white rounded-xl border border-slate-200 px-6 py-4' : ''}`}>
+        <div className={`flex items-center justify-between mb-4 ${vista === 'tablero' ? 'bg-white rounded-xl border border-slate-200 px-6 py-4' : ''}`}>
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-slate-800">Tareas</h2>
 
-            {/* Toggle Lista / Tablero */}
+            {/* Toggle Lista / Tablero / Reportes */}
             <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
               <button
-                onClick={() => setVistaTablero(false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${!vistaTablero ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                onClick={() => setVista('lista')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'lista' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -222,18 +223,27 @@ const Proyecto = () => {
                 Lista
               </button>
               <button
-                onClick={() => setVistaTablero(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vistaTablero ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                onClick={() => setVista('tablero')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'tablero' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                 </svg>
                 Tablero
               </button>
+              <button
+                onClick={() => setVista('reportes')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'reportes' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Reportes
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {vista !== 'reportes' && <div className="flex items-center gap-2">
             {(tareas?.length > 0) && (
               <button
                 onClick={() => setMostrarFiltros(v => !v)}
@@ -265,11 +275,11 @@ const Proyecto = () => {
                 Agregar tarea
               </button>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Barra de filtros */}
-        {mostrarFiltros && (
+        {mostrarFiltros && vista !== 'reportes' && (
           <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <div className="flex flex-wrap gap-x-6 gap-y-3">
               <div>
@@ -336,8 +346,10 @@ const Proyecto = () => {
           </div>
         )}
 
-        {!tareas?.length ? (
-          <div className={`flex flex-col items-center justify-center py-12 text-center ${vistaTablero ? 'bg-white rounded-xl border border-slate-200' : ''}`}>
+        {vista === 'reportes' ? (
+          <ReportesProyecto proyectoId={params.id} embedded />
+        ) : !tareas?.length ? (
+          <div className={`flex flex-col items-center justify-center py-12 text-center ${vista === 'tablero' ? 'bg-white rounded-xl border border-slate-200' : ''}`}>
             <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
               <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -357,7 +369,7 @@ const Proyecto = () => {
             )}
           </div>
 
-        ) : vistaTablero ? (
+        ) : vista === 'tablero' ? (
           /* ── VISTA TABLERO ── */
           <div className="overflow-x-auto pb-4">
             <div className="flex gap-4 min-w-max">
@@ -626,19 +638,22 @@ const Proyecto = () => {
         )}
       </div>
 
-      {/* Separador de sección */}
-      <div className="flex items-center gap-4 my-8">
-        <hr className="flex-1 border-slate-200" />
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-widest whitespace-nowrap">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          Equipo
-        </span>
-        <hr className="flex-1 border-slate-200" />
-      </div>
-
-      <Colaboradores />
+      {vista !== 'reportes' && (
+        <>
+          {/* Separador de sección */}
+          <div className="flex items-center gap-4 my-8">
+            <hr className="flex-1 border-slate-200" />
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Equipo
+            </span>
+            <hr className="flex-1 border-slate-200" />
+          </div>
+          <Colaboradores />
+        </>
+      )}
 
       {modalFormularioTarea && (
         <Modal titulo={puedeEditarEstado ? "Tarea" : "Detalle de tarea"} onClose={handleModalTarea}>
