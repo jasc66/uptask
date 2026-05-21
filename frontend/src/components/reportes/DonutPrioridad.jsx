@@ -17,13 +17,13 @@ const TooltipCustom = ({ active, payload }) => {
   )
 }
 
-const DonutPrioridad = ({ datos = [] }) => {
+const DonutPrioridad = ({ datos = [], altura = 208 }) => {
   if (!datos.length) {
     return <div className="flex items-center justify-center h-full text-xs text-slate-400">Sin datos</div>
   }
   const entries = datos.map(d => ({ name: d.prioridad, value: d.count }))
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height={altura}>
       <PieChart>
         <Pie
           data={entries}

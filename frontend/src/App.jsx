@@ -17,6 +17,9 @@ import AdminUsuarios from "./page/AdminUsuarios";
 import Reportes from "./page/Reportes";
 import ReportesProyecto from "./page/ReportesProyecto";
 import ReportesUsuario from "./page/ReportesUsuario";
+import ReportesGuardados from "./page/ReportesGuardados";
+import ReportBuilder from "./page/ReportBuilder";
+import ReportesProgramados from "./page/ReportesProgramados";
 
 import { AuthProvider } from "./context/AuthProvider";
 import { ProyectosProvider } from "./context/ProyectosProvider";
@@ -48,6 +51,10 @@ function App() {
               <Route path="reportes" element={<Reportes />} />
               <Route path="reportes/proyecto/:id" element={<ReportesProyecto />} />
               <Route path="reportes/usuario/:id" element={<ReportesUsuario />} />
+              <Route path="reportes/guardados" element={<ReportesGuardados />} />
+              <Route path="reportes/builder" element={<ReportBuilder />} />
+              <Route path="reportes/builder/:id" element={<ReportBuilder />} />
+              <Route path="reportes/programados" element={<ReportesProgramados />} />
             </Route>
           </Routes>
         </ProyectosProvider>

@@ -19,13 +19,13 @@ const TooltipCustom = ({ active, payload, label }) => {
   )
 }
 
-const LineaEvolucion = ({ datos = [] }) => {
+const LineaEvolucion = ({ datos = [], altura = 208 }) => {
   if (!datos.length) {
     return <div className="flex items-center justify-center h-full text-xs text-slate-400">Sin datos</div>
   }
   const formateados = datos.map(d => ({ ...d, label: formatMes(d.mes) }))
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height={altura}>
       <LineChart data={formateados} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />

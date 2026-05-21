@@ -10,6 +10,7 @@ import proyectoRoutes from "./routes/proyectoRoutes.js";
 import tareaRoutes from "./routes/tareaRoutes.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
 import { initSocket } from "./socket.js";
+import { initScheduler } from "./helpers/reporteScheduler.js";
 
 
 const app = express();
@@ -50,4 +51,5 @@ initSocket(server);
 
 server.listen(PORT, ()=> {
 	console.log(`Servidor corriendo en el puerto ${PORT}`);
+	initScheduler();
 });

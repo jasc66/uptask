@@ -17,12 +17,12 @@ const TooltipCustom = ({ active, payload }) => {
   )
 }
 
-const BarrasEstado = ({ datos = [] }) => {
+const BarrasEstado = ({ datos = [], altura = 208 }) => {
   if (!datos.length) {
     return <div className="flex items-center justify-center h-full text-xs text-slate-400">Sin datos</div>
   }
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height={altura}>
       <BarChart data={datos} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
         <XAxis dataKey="estado" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
