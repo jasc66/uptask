@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 const TablaCargaUsuarios = ({ datos = [], cargando }) => {
   if (cargando) {
     return (
@@ -52,4 +54,7 @@ const TablaCargaUsuarios = ({ datos = [], cargando }) => {
   )
 }
 
-export default TablaCargaUsuarios
+const sonIguales = (prev, next) =>
+  prev.cargando === next.cargando && JSON.stringify(prev.datos) === JSON.stringify(next.datos)
+
+export default memo(TablaCargaUsuarios, sonIguales)

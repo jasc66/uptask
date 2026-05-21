@@ -113,9 +113,17 @@ const ReportesUsuario = () => {
               style={{ width: `${Math.round((datos.completadas / datos.total) * 100)}%` }}
             />
           </div>
-          {datos.tiempoPromedioResolucion && (
+          {datos.tiempoPromedioResolucion != null && (
             <p className="text-xs text-slate-400 mt-2">
-              Tiempo promedio de resolución: <span className="font-medium text-slate-600">{datos.tiempoPromedioResolucion}</span>
+              Tiempo promedio de resolución:{' '}
+              <span className="font-medium text-slate-600">
+                {datos.tiempoPromedioResolucion >= 24
+                  ? `${(datos.tiempoPromedioResolucion / 24).toFixed(1)} días`
+                  : `${datos.tiempoPromedioResolucion} h`}
+              </span>
+              {datos.tiempoPromedioMuestra > 0 && (
+                <span className="text-slate-400"> · sobre {datos.tiempoPromedioMuestra} tarea{datos.tiempoPromedioMuestra !== 1 ? 's' : ''}</span>
+              )}
             </p>
           )}
         </div>

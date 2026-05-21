@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const COLORES = {
@@ -45,4 +46,7 @@ const DonutPrioridad = ({ datos = [], altura = 208 }) => {
   )
 }
 
-export default DonutPrioridad
+const sonIguales = (prev, next) =>
+  prev.altura === next.altura && JSON.stringify(prev.datos) === JSON.stringify(next.datos)
+
+export default memo(DonutPrioridad, sonIguales)

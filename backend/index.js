@@ -9,6 +9,7 @@ import usuarioRoutes from './routes/usuarioRoutes.js';
 import proyectoRoutes from "./routes/proyectoRoutes.js";
 import tareaRoutes from "./routes/tareaRoutes.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
+import busquedaRoutes from "./routes/busquedaRoutes.js";
 import { initSocket } from "./socket.js";
 import { initScheduler } from "./helpers/reporteScheduler.js";
 
@@ -44,6 +45,7 @@ app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/proyectos", proyectoRoutes);
 app.use("/api/tareas", tareaRoutes);
 app.use("/api/reportes", reportesRoutes);
+app.use("/api/buscar", busquedaRoutes);
 
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);

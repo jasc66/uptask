@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const MESES_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -40,4 +41,7 @@ const LineaEvolucion = ({ datos = [], altura = 208 }) => {
   )
 }
 
-export default LineaEvolucion
+const sonIguales = (prev, next) =>
+  prev.altura === next.altura && JSON.stringify(prev.datos) === JSON.stringify(next.datos)
+
+export default memo(LineaEvolucion, sonIguales)

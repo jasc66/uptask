@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const COLORES = {
@@ -38,4 +39,7 @@ const BarrasEstado = ({ datos = [], altura = 208 }) => {
   )
 }
 
-export default BarrasEstado
+const sonIguales = (prev, next) =>
+  prev.altura === next.altura && JSON.stringify(prev.datos) === JSON.stringify(next.datos)
+
+export default memo(BarrasEstado, sonIguales)

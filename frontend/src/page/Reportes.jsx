@@ -101,8 +101,17 @@ const Reportes = () => {
     cargar()
   }, [cargar])
 
+  // Coalesce ráfagas de eventos socket — evita re-render por cada tarea actualizada
+  const debounceTimer = useRef(null)
+  const recargarDebounced = useCallback(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => cargar(), 400)
+  }, [cargar])
+
+  useEffect(() => () => debounceTimer.current && clearTimeout(debounceTimer.current), [])
+
   const socketRef = useSocket({
-    onEvento: () => cargar(),
+    onEvento: recargarDebounced,
   })
 
   useEffect(() => {

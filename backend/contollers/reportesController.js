@@ -3,6 +3,9 @@ import Proyecto from '../models/Proyecto.js';
 import Tarea from '../models/Tarea.js';
 import Usuario from '../models/Usuario.js';
 
+const ESTADOS_VALIDOS = ['Pendiente', 'En Progreso', 'En Revisión', 'Completada'];
+const PRIORIDADES_VALIDAS = ['Baja', 'Media', 'Alta', 'Urgente'];
+
 // Devuelve los IDs de proyectos visibles para el usuario (row-level security)
 const getProyectosVisibles = async (usuario) => {
     if (usuario.rol === 'admin') {
@@ -90,7 +93,13 @@ const getTareasPorEstado = async (req, res) => {
     try {
         const proyectosIds = await getProyectosVisibles(req.usuario);
         const resultado = await Tarea.aggregate([
-            { $match: { proyecto: { $in: proyectosIds }, tareaPadre: null } },
+            {
+                $match: {
+                    proyecto: { $in: proyectosIds },
+                    tareaPadre: null,
+                    estado: { $in: ESTADOS_VALIDOS },
+                },
+            },
             { $group: { _id: '$estado', count: { $sum: 1 } } },
             { $project: { _id: 0, estado: '$_id', count: 1 } },
             { $sort: { estado: 1 } },
@@ -107,7 +116,13 @@ const getTareasPorPrioridad = async (req, res) => {
     try {
         const proyectosIds = await getProyectosVisibles(req.usuario);
         const resultado = await Tarea.aggregate([
-            { $match: { proyecto: { $in: proyectosIds }, tareaPadre: null } },
+            {
+                $match: {
+                    proyecto: { $in: proyectosIds },
+                    tareaPadre: null,
+                    prioridad: { $in: PRIORIDADES_VALIDAS },
+                },
+            },
             { $group: { _id: '$prioridad', count: { $sum: 1 } } },
             { $project: { _id: 0, prioridad: '$_id', count: 1 } },
             { $sort: { prioridad: 1 } },
@@ -310,12 +325,16 @@ const getReporteProyecto = async (req, res) => {
         const completadasCount = tareas.filter(t => t.estado === 'Completada').length;
         const avancePct = totalTareas > 0 ? Math.round((completadasCount / totalTareas) * 100) : 0;
 
-        // Agrupaciones
+        // Agrupaciones — solo valores válidos del enum (evita "false: 1" de datos antiguos)
         const estadoMap = {};
         const prioridadMap = {};
         tareas.forEach(t => {
-            estadoMap[t.estado] = (estadoMap[t.estado] || 0) + 1;
-            prioridadMap[t.prioridad] = (prioridadMap[t.prioridad] || 0) + 1;
+            if (ESTADOS_VALIDOS.includes(t.estado)) {
+                estadoMap[t.estado] = (estadoMap[t.estado] || 0) + 1;
+            }
+            if (PRIORIDADES_VALIDAS.includes(t.prioridad)) {
+                prioridadMap[t.prioridad] = (prioridadMap[t.prioridad] || 0) + 1;
+            }
         });
         const tareasPorEstado = Object.entries(estadoMap).map(([estado, count]) => ({ estado, count }));
         const tareasPorPrioridad = Object.entries(prioridadMap).map(([prioridad, count]) => ({ prioridad, count }));
@@ -419,7 +438,8 @@ const getReporteUsuario = async (req, res) => {
         const vencidas = tareas.filter(t => t.estado !== 'Completada' && t.fechaEntrega < ahora).length;
         const enProgreso = tareas.filter(t => t.estado === 'En Progreso').length;
 
-        // Productividad mensual últimos 6 meses (aproximación via updatedAt)
+        // Productividad mensual últimos 6 meses — usar completadaEn cuando esté disponible,
+        // fallback a updatedAt para tareas legacy completadas antes del campo
         const seisMesesAtras = new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1);
         const productividadRaw = await Tarea.aggregate([
             {
@@ -427,11 +447,16 @@ const getReporteUsuario = async (req, res) => {
                     proyecto: { $in: proyectosIds },
                     responsable: targetObjectId,
                     estado: 'Completada',
-                    updatedAt: { $gte: seisMesesAtras },
                     tareaPadre: null,
                 },
             },
-            { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$updatedAt' } }, completadas: { $sum: 1 } } },
+            {
+                $addFields: {
+                    fechaCompletado: { $ifNull: ['$completadaEn', '$updatedAt'] },
+                },
+            },
+            { $match: { fechaCompletado: { $gte: seisMesesAtras } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$fechaCompletado' } }, completadas: { $sum: 1 } } },
             { $sort: { _id: 1 } },
         ]);
 
@@ -443,13 +468,38 @@ const getReporteUsuario = async (req, res) => {
         }
         productividadRaw.forEach(({ _id, completadas: c }) => { if (prodMap[_id]) prodMap[_id].completadas = c; });
 
+        // Tiempo promedio de resolución (horas): completadaEn - createdAt sobre tareas con
+        // completadaEn definido. Tareas legacy sin completadaEn no entran en el cálculo.
+        const resolucionRaw = await Tarea.aggregate([
+            {
+                $match: {
+                    proyecto: { $in: proyectosIds },
+                    responsable: targetObjectId,
+                    estado: 'Completada',
+                    completadaEn: { $ne: null },
+                    tareaPadre: null,
+                },
+            },
+            {
+                $project: {
+                    horas: { $divide: [{ $subtract: ['$completadaEn', '$createdAt'] }, 1000 * 60 * 60] },
+                },
+            },
+            { $group: { _id: null, promedio: { $avg: '$horas' }, total: { $sum: 1 } } },
+        ]);
+
+        const tiempoPromedioResolucion = resolucionRaw[0]?.promedio != null
+            ? Math.round(resolucionRaw[0].promedio * 10) / 10
+            : null;
+
         res.json({
             total: tareas.length,
             completadas,
             vencidas,
             enProgreso,
             productividadMensual: Object.values(prodMap),
-            tiempoPromedioResolucion: null, // disponible en Fase 7 con campo completadaEn
+            tiempoPromedioResolucion, // en horas, basado en completadaEn - createdAt
+            tiempoPromedioMuestra: resolucionRaw[0]?.total ?? 0,
         });
     } catch (error) {
         console.log(error);
