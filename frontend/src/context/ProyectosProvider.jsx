@@ -520,6 +520,40 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    const subirAdjunto = async (tareaId, archivo) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const formData = new FormData()
+            formData.append('archivo', archivo)
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/tareas/adjunto/${tareaId}`, formData, config)
+            setTareaDetalle(prev => ({
+                ...prev,
+                adjuntos: [...(prev?.adjuntos ?? []), data],
+            }))
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al subir el archivo', error: true })
+            return null
+        }
+    }
+
+    const eliminarAdjunto = async (tareaId, adjuntoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/tareas/adjunto/${tareaId}/${adjuntoId}`, config)
+            setTareaDetalle(prev => ({
+                ...prev,
+                adjuntos: prev?.adjuntos?.filter(a => a._id !== adjuntoId) ?? [],
+            }))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar el archivo', error: true })
+        }
+    }
+
     const moverTareaASeccion = async (tareaId, seccionId) => {
         try {
             const token = localStorage.getItem('token')
@@ -611,6 +645,8 @@ const ProyectosProvider = ({children}) => {
                 importarProyecto,
                 agregarDependencia,
                 eliminarDependencia,
+                subirAdjunto,
+                eliminarAdjunto,
             }}
             >{children}
 

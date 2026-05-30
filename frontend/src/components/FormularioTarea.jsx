@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import useProyectos from '../hooks/useProyectos'
 import useAuth from '../hooks/useAuth'
@@ -18,7 +18,7 @@ const FormularioTarea = () => {
     submitTarea, alerta, mostrarAlerta, tareaEditar, proyecto,
     tareaDetalle, agregarComentario, etiquetasProyecto, crearEtiqueta,
     eliminarEtiqueta, agregarSubtarea, cambiarEstadoSubtarea, secciones,
-    agregarDependencia, eliminarDependencia,
+    agregarDependencia, eliminarDependencia, subirAdjunto, eliminarAdjunto,
   } = useProyectos()
   const { auth } = useAuth()
 
@@ -52,6 +52,9 @@ const FormularioTarea = () => {
   const [mostrarFormSubtarea, setMostrarFormSubtarea] = useState(false)
   const [mostrarFormDependencia, setMostrarFormDependencia] = useState(false)
   const [nuevaDependencia, setNuevaDependencia] = useState({ tareaId: '', tipo: 'depende_de' })
+  const [draggingOver, setDraggingOver] = useState(false)
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (tareaEditar?._id) {
@@ -186,6 +189,27 @@ const FormularioTarea = () => {
     }))
     setMostrarMenciones(false)
     setFiltroMencion('')
+  }
+
+  const handleArchivoSeleccionado = async (archivo) => {
+    if (!archivo || subiendoArchivo) return
+    setSubiendoArchivo(true)
+    await subirAdjunto(tareaId, archivo)
+    setSubiendoArchivo(false)
+  }
+
+  const handleDropArchivo = (e) => {
+    e.preventDefault()
+    setDraggingOver(false)
+    const archivo = e.dataTransfer.files[0]
+    if (archivo) handleArchivoSeleccionado(archivo)
+  }
+
+  const fmtTamaño = (bytes) => {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   // Lista de participantes: creador + colaboradores
@@ -684,6 +708,107 @@ const FormularioTarea = () => {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Adjuntos — solo al editar */}
+      {tareaId && (
+        <div className="border-t border-slate-100 mt-5 pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-700">
+              Adjuntos
+              {(tareaDetalle?.adjuntos?.length ?? 0) > 0 && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  {tareaDetalle.adjuntos.length}
+                </span>
+              )}
+            </h3>
+          </div>
+
+          {/* Zona drag-and-drop */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDraggingOver(true) }}
+            onDragLeave={() => setDraggingOver(false)}
+            onDrop={handleDropArchivo}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-xl p-5 cursor-pointer transition-colors ${
+              draggingOver
+                ? 'border-indigo-400 bg-indigo-50'
+                : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => handleArchivoSeleccionado(e.target.files[0])}
+            />
+            {subiendoArchivo ? (
+              <span className="text-xs text-indigo-500 font-medium">Subiendo...</span>
+            ) : (
+              <>
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <p className="text-xs text-slate-500 text-center">
+                  <span className="text-indigo-600 font-medium">Haz clic</span> o arrastra un archivo aquí
+                </p>
+                <p className="text-[10px] text-slate-400">Máximo 10 MB</p>
+              </>
+            )}
+          </div>
+
+          {/* Lista de adjuntos existentes */}
+          {(tareaDetalle?.adjuntos ?? []).length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {tareaDetalle.adjuntos.map(adj => {
+                const esImagen = adj.tipo?.startsWith('image/')
+                return (
+                  <li
+                    key={adj._id}
+                    className="flex items-center gap-3 p-2 rounded-lg border border-slate-100 bg-white group/adj hover:border-slate-200 transition-colors"
+                  >
+                    {esImagen ? (
+                      <a href={adj.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                        <img
+                          src={adj.url}
+                          alt={adj.nombre}
+                          className="w-10 h-10 rounded-md object-cover border border-slate-100"
+                        />
+                      </a>
+                    ) : (
+                      <div className="w-10 h-10 rounded-md bg-indigo-50 border border-slate-100 flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={adj.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-slate-700 font-medium truncate block hover:text-indigo-600 transition-colors"
+                      >
+                        {adj.nombre}
+                      </a>
+                      <p className="text-xs text-slate-400">{fmtTamaño(adj.tamaño)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => eliminarAdjunto(tareaId, adj._id)}
+                      className="opacity-0 group-hover/adj:opacity-100 text-slate-300 hover:text-red-500 transition-all shrink-0"
+                      title="Eliminar adjunto"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </div>
       )}

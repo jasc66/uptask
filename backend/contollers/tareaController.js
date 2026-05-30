@@ -4,6 +4,7 @@ import Seccion from "../models/Seccion.js";
 import Usuario from "../models/Usuario.js";
 import { emitirEventoTarea } from "../socket.js";
 import { crearNotificacion, extraerMenciones } from "../helpers/notificaciones.js";
+import { uploadBuffer, deleteAsset } from "../helpers/cloudinary.js";
 
 // --- helpers de permisos ---
 const esCreador = (proyecto, usuarioId) =>
@@ -595,6 +596,69 @@ const moverSeccion = async (req, res) => {
     }
 };
 
+const subirAdjunto = async (req, res) => {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ msg: 'No se recibió ningún archivo' });
+
+    try {
+        const tarea = await Tarea.findById(id).populate('proyecto');
+        if (!tarea) return res.status(404).json({ msg: 'Tarea no encontrada' });
+        if (!tieneAcceso(tarea.proyecto, req.usuario)) {
+            return res.status(403).json({ msg: 'Sin permisos para adjuntar archivos' });
+        }
+
+        const result = await uploadBuffer(req.file.buffer);
+
+        tarea.adjuntos.push({
+            nombre: req.file.originalname,
+            url: result.secure_url,
+            publicId: result.public_id,
+            resourceType: result.resource_type,
+            tipo: req.file.mimetype,
+            tamaño: req.file.size,
+            subidoPor: req.usuario._id,
+        });
+        await tarea.save();
+
+        const adjunto = tarea.adjuntos[tarea.adjuntos.length - 1];
+        emitirEventoTarea(tarea.proyecto, 'actualizada', { tareaId: tarea._id, proyectoId: tarea.proyecto._id });
+        res.json(adjunto);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: error.message });
+    }
+};
+
+const eliminarAdjunto = async (req, res) => {
+    const { id, adjuntoId } = req.params;
+
+    try {
+        const tarea = await Tarea.findById(id).populate('proyecto');
+        if (!tarea) return res.status(404).json({ msg: 'Tarea no encontrada' });
+        if (!tieneAcceso(tarea.proyecto, req.usuario)) {
+            return res.status(403).json({ msg: 'Sin permisos' });
+        }
+
+        const adjunto = tarea.adjuntos.id(adjuntoId);
+        if (!adjunto) return res.status(404).json({ msg: 'Adjunto no encontrado' });
+
+        const esSubidor = adjunto.subidoPor?.toString() === req.usuario._id.toString();
+        if (!esSubidor && !esCreador(tarea.proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+            return res.status(403).json({ msg: 'Solo puedes eliminar archivos que tú subiste' });
+        }
+
+        await deleteAsset(adjunto.publicId, adjunto.resourceType);
+        tarea.adjuntos.pull(adjuntoId);
+        await tarea.save();
+
+        emitirEventoTarea(tarea.proyecto, 'actualizada', { tareaId: tarea._id, proyectoId: tarea.proyecto._id });
+        res.json({ msg: 'Adjunto eliminado', adjuntoId });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: error.message });
+    }
+};
+
 export {
     agregarTarea,
     obtenerTarea,
@@ -607,4 +671,6 @@ export {
     moverSeccion,
     agregarDependencia,
     eliminarDependencia,
+    subirAdjunto,
+    eliminarAdjunto,
 };

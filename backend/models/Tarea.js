@@ -75,6 +75,18 @@ const tareaSchema = mongoose.Schema({
 			createdAt: { type: Date, default: Date.now },
 		}
 	],
+	adjuntos: [
+		{
+			nombre: { type: String, required: true },
+			url: { type: String, required: true },
+			publicId: { type: String, required: true },
+			resourceType: { type: String, default: 'raw' },
+			tipo: { type: String },
+			tamaño: { type: Number },
+			subidoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario' },
+			createdAt: { type: Date, default: Date.now },
+		}
+	],
 
 }, {
 	timestamps: true,

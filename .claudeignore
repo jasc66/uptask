@@ -1,0 +1,17 @@
+# Build output — large compiled assets, no value for AI context
+frontend/dist/
+frontend/.vite/
+
+# Lock files — thousands of lines, never useful for code understanding
+package-lock.json
+frontend/package-lock.json
+backend/package-lock.json
+
+# OS / editor noise
+.DS_Store
+*.log
+
+# node_modules (may not be in .gitignore at root level)
+node_modules/
+frontend/node_modules/
+backend/node_modules/
