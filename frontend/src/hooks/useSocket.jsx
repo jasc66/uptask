@@ -38,7 +38,7 @@ const liberarSocket = () => {
     }, 200)
 }
 
-const useSocket = ({ onEvento, proyectoId } = {}) => {
+const useSocket = ({ onEvento, onNotificacion, proyectoId } = {}) => {
     const socketRef = useRef(null)
 
     useEffect(() => {
@@ -48,10 +48,12 @@ const useSocket = ({ onEvento, proyectoId } = {}) => {
 
         if (proyectoId) socket.emit('unirse:proyecto', proyectoId)
         if (onEvento) socket.on('tarea:evento', onEvento)
+        if (onNotificacion) socket.on('notificacion:nueva', onNotificacion)
 
         return () => {
             if (proyectoId) socket.emit('salir:proyecto', proyectoId)
             if (onEvento) socket.off('tarea:evento', onEvento)
+            if (onNotificacion) socket.off('notificacion:nueva', onNotificacion)
             socketRef.current = null
             liberarSocket()
         }

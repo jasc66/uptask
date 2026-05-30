@@ -20,14 +20,17 @@ import ReportesUsuario from "./page/ReportesUsuario";
 import ReportesGuardados from "./page/ReportesGuardados";
 import ReportBuilder from "./page/ReportBuilder";
 import ReportesProgramados from "./page/ReportesProgramados";
+import Notificaciones from "./page/Notificaciones";
 
 import { AuthProvider } from "./context/AuthProvider";
 import { ProyectosProvider } from "./context/ProyectosProvider";
+import { NotificacionesProvider } from "./context/NotificacionesProvider";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <NotificacionesProvider>
         <ProyectosProvider>
           <Routes>
             <Route path="/" element={<AuthLayout />}>
@@ -55,9 +58,11 @@ function App() {
               <Route path="reportes/builder" element={<ReportBuilder />} />
               <Route path="reportes/builder/:id" element={<ReportBuilder />} />
               <Route path="reportes/programados" element={<ReportesProgramados />} />
+              <Route path="notificaciones" element={<Notificaciones />} />
             </Route>
           </Routes>
         </ProyectosProvider>
+        </NotificacionesProvider>
       </AuthProvider>
     </BrowserRouter>
   );

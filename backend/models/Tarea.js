@@ -20,6 +20,12 @@ const tareaSchema = mongoose.Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "Usuario",
 	},
+	responsables: [
+		{
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Usuario",
+		},
+	],
 	fechaInicio: {
 		type: Date,
 		default: null,
@@ -54,10 +60,17 @@ const tareaSchema = mongoose.Schema({
 	etiquetas: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Etiqueta' }],
 	tareaPadre: { type: mongoose.Schema.Types.ObjectId, ref: 'Tarea', default: null },
 	subtareas: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tarea' }],
+	dependencias: [
+		{
+			tarea: { type: mongoose.Schema.Types.ObjectId, ref: 'Tarea', required: true },
+			tipo: { type: String, enum: ['bloquea', 'depende_de'], required: true },
+		}
+	],
 	actividad: [
 		{
 			usuario: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" },
-			tipo: { type: String, enum: ["comentario", "cambio_estado", "cambio_responsable"] },
+			tipo: { type: String, enum: ["comentario", "cambio_estado", "cambio_responsable", "asignacion"] },
+			menciones: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
 			contenido: { type: String },
 			createdAt: { type: Date, default: Date.now },
 		}

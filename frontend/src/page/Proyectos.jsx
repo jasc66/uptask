@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom"
+import { useRef, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import useProyectos from "../hooks/useProyectos"
 import useAuth from "../hooks/useAuth"
 import PreviewProyecto from "../components/PreviewProyecto"
@@ -10,9 +11,25 @@ const ESTADO_COLOR = {
   'Completada':  'bg-emerald-100 text-emerald-700',
 }
 
+const contarTareas = (tareas = []) => {
+  let total = 0
+  const recorrer = (lista) => {
+    for (const t of lista) {
+      total++
+      if (t.subtareas?.length) recorrer(t.subtareas)
+    }
+  }
+  recorrer(tareas)
+  return total
+}
+
 const Proyectos = () => {
-  const { proyectos, handleModalFormulario, misTareas } = useProyectos()
+  const { proyectos, handleModalFormulario, misTareas, importarProyecto, mostrarAlerta } = useProyectos()
   const { auth } = useAuth()
+  const navigate = useNavigate()
+  const fileInputRef = useRef(null)
+  const [modalImportar, setModalImportar] = useState(null)
+  const [importando, setImportando] = useState(false)
 
   const ahora = new Date()
   const enUnaSemana = new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -25,6 +42,47 @@ const Proyectos = () => {
   const proximasTareas = tareasPendientes.slice(0, 5)
 
   const hayAlerta = tareasEstaSemana.length > 0
+
+  const handleArchivoSeleccionado = (e) => {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+    e.target.value = ''
+
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const datos = JSON.parse(ev.target.result)
+        if (!datos?.version || !datos?.proyecto) {
+          mostrarAlerta({ msg: 'El archivo no es un proyecto Nexo válido.', error: true })
+          return
+        }
+        if (datos.version !== '1') {
+          mostrarAlerta({ msg: `Versión de archivo no soportada (v${datos.version}). Se requiere versión 1.`, error: true })
+          return
+        }
+        setModalImportar({
+          datos,
+          nombre: datos.proyecto.nombre,
+          totalTareas: contarTareas(datos.tareas),
+          totalEtiquetas: datos.etiquetas?.length ?? 0,
+        })
+      } catch {
+        mostrarAlerta({ msg: 'El archivo JSON está dañado o tiene formato incorrecto.', error: true })
+      }
+    }
+    reader.readAsText(archivo)
+  }
+
+  const confirmarImportacion = async () => {
+    if (!modalImportar) return
+    setImportando(true)
+    const resultado = await importarProyecto(modalImportar.datos)
+    setImportando(false)
+    setModalImportar(null)
+    if (resultado?.proyectoId) {
+      navigate(`/proyectos/${resultado.proyectoId}`)
+    }
+  }
 
   const statCards = [
     {
@@ -79,6 +137,15 @@ const Proyectos = () => {
 
   return (
     <div>
+      {/* Input oculto para importar */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleArchivoSeleccionado}
+      />
+
       {/* Heading */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
@@ -92,15 +159,26 @@ const Proyectos = () => {
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Resumen de tus proyectos y tareas</p>
         </div>
-        <button
-          onClick={handleModalFormulario}
-          className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo proyecto
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-semibold rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Importar
+          </button>
+          <button
+            onClick={handleModalFormulario}
+            className="flex items-center justify-center gap-2 flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo proyecto
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -193,6 +271,71 @@ const Proyectos = () => {
           >
             Crear primer proyecto
           </button>
+        </div>
+      )}
+      {/* Modal de confirmación de importación */}
+      {modalImportar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800">Importar proyecto</h3>
+                <p className="text-xs text-slate-400">Confirma los detalles antes de importar</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 space-y-2 mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500">Nombre</span>
+                <span className="text-sm font-semibold text-slate-800 truncate max-w-[200px]">{modalImportar.nombre}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500">Tareas</span>
+                <span className="text-sm font-semibold text-slate-800">{modalImportar.totalTareas}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500">Etiquetas</span>
+                <span className="text-sm font-semibold text-slate-800">{modalImportar.totalEtiquetas}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-amber-700">Los colaboradores no se importan — deberás re-invitarlos manualmente.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalImportar(null)}
+                disabled={importando}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarImportacion}
+                disabled={importando}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {importando ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Importando...
+                  </>
+                ) : 'Importar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

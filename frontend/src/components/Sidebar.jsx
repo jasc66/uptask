@@ -1,10 +1,12 @@
 import { NavLink } from "react-router-dom"
 import useAuth from "../hooks/useAuth"
 import useProyectos from "../hooks/useProyectos"
+import useNotificaciones from "../hooks/useNotificaciones"
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { auth } = useAuth()
   const { handleModalFormulario } = useProyectos()
+  const { noLeidas = 0 } = useNotificaciones() ?? {}
 
   const iniciales = auth.nombre
     ? auth.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -76,6 +78,17 @@ const Sidebar = ({ isOpen, onClose }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
           Mis tareas
+        </NavLink>
+        <NavLink to="/proyectos/notificaciones" className={navClass} onClick={handleNavClick}>
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" />
+          </svg>
+          <span className="flex-1">Notificaciones</span>
+          {noLeidas > 0 && (
+            <span className="min-w-[1.1rem] h-[1.1rem] px-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {noLeidas > 9 ? '9+' : noLeidas}
+            </span>
+          )}
         </NavLink>
         <NavLink to="/proyectos/reportes" end className={navClass} onClick={handleNavClick}>
           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

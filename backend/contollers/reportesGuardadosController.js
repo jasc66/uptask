@@ -103,7 +103,14 @@ const ejecutarTareas = async ({ metricas, filtros, agrupacion, ordenamiento }, u
 		const ids = toObjectIds(filtros.proyecto);
 		match.proyecto = { $in: ids.filter((id) => proyectosIds.some((p) => p.toString() === id.toString())) };
 	}
-	if (filtros.responsable?.length) match.responsable = { $in: toObjectIds(filtros.responsable) };
+	if (filtros.responsable?.length) {
+		const ids = toObjectIds(filtros.responsable);
+		match.$or = [
+			...(match.$or || []),
+			{ responsable: { $in: ids } },
+			{ responsables: { $in: ids } },
+		];
+	}
 	if (filtros.desde) match.createdAt = { ...(match.createdAt || {}), $gte: new Date(filtros.desde) };
 	if (filtros.hasta) match.createdAt = { ...(match.createdAt || {}), $lte: new Date(filtros.hasta) };
 	if (filtros.soloVencidas) {
@@ -246,7 +253,12 @@ const ejecutarUsuarios = async ({ metricas, filtros, agrupacion }, usuario) => {
 						$match: {
 							$expr: {
 								$and: [
-									{ $eq: ["$responsable", "$$uid"] },
+									{
+										$or: [
+											{ $eq: ["$responsable", "$$uid"] },
+											{ $in: ["$$uid", { $ifNull: ["$responsables", []] }] },
+										],
+									},
 									{ $in: ["$proyecto", proyectosIds] },
 								],
 							},

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import clienteAxios from "../config/clienteAxios"
 import useAuth from "../hooks/useAuth"
+import useNotificaciones from "../hooks/useNotificaciones"
 
 const ESTADO_COLOR = {
   'Pendiente':   'bg-slate-100 text-slate-600',
@@ -10,16 +11,28 @@ const ESTADO_COLOR = {
   'Completada':  'bg-emerald-100 text-emerald-700',
 }
 
+const TIPO_ICON = {
+  mencion: '@',
+  asignacion: '👤',
+  cambio_estado: '✓',
+  comentario: '💬',
+  vencimiento: '⏰',
+  dependencia_resuelta: '🔓',
+}
+
 const Header = ({ onMenuClick }) => {
   const { setAuth } = useAuth()
   const navigate = useNavigate()
+  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones() ?? {}
   const [searchOpen, setSearchOpen] = useState(false)
   const [consulta, setConsulta] = useState('')
   const [resultados, setResultados] = useState({ proyectos: [], tareas: [] })
   const [buscando, setBuscando] = useState(false)
   const [dropdownAbierto, setDropdownAbierto] = useState(false)
+  const [notiAbierto, setNotiAbierto] = useState(false)
   const debounceRef = useRef(null)
   const contenedorRef = useRef(null)
+  const notiRef = useRef(null)
 
   const cerrarSesion = () => {
     localStorage.removeItem('token')
@@ -57,11 +70,14 @@ const Header = ({ onMenuClick }) => {
     return () => debounceRef.current && clearTimeout(debounceRef.current)
   }, [consulta])
 
-  // Cerrar dropdown al hacer click fuera
+  // Cerrar dropdowns al hacer click fuera
   useEffect(() => {
     const handler = (e) => {
       if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
         setDropdownAbierto(false)
+      }
+      if (notiRef.current && !notiRef.current.contains(e.target)) {
+        setNotiAbierto(false)
       }
     }
     document.addEventListener('mousedown', handler)
@@ -228,6 +244,88 @@ const Header = ({ onMenuClick }) => {
           </svg>
         </button>
       )}
+
+      {/* Notificaciones */}
+      <div ref={notiRef} className="relative shrink-0">
+        <button
+          onClick={() => setNotiAbierto(v => !v)}
+          className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          aria-label="Notificaciones"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" />
+          </svg>
+          {noLeidas > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {noLeidas > 9 ? '9+' : noLeidas}
+            </span>
+          )}
+        </button>
+
+        {notiAbierto && (
+          <div className="absolute right-0 mt-1 w-80 sm:w-96 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-[28rem] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+              <p className="text-sm font-semibold text-slate-700">Notificaciones</p>
+              {noLeidas > 0 && (
+                <button
+                  onClick={marcarTodasLeidas}
+                  className="text-xs text-indigo-500 hover:text-indigo-700"
+                >
+                  Marcar todas leídas
+                </button>
+              )}
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {(notificaciones?.length ?? 0) === 0 && (
+                <div className="px-4 py-8 text-center">
+                  <p className="text-xs text-slate-400">Sin notificaciones</p>
+                </div>
+              )}
+              {notificaciones?.slice(0, 12).map(n => (
+                <button
+                  key={n._id}
+                  onClick={() => {
+                    marcarLeida(n._id)
+                    setNotiAbierto(false)
+                    if (n.proyecto?._id) {
+                      const tareaParam = n.tarea?._id ? `?tarea=${n.tarea._id}` : ''
+                      navigate(`/proyectos/${n.proyecto._id}${tareaParam}`)
+                    }
+                  }}
+                  className={`w-full text-left px-4 py-2.5 hover:bg-slate-50 border-b border-slate-50 transition-colors ${!n.leida ? 'bg-indigo-50/40' : ''}`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base shrink-0" aria-hidden>
+                      {TIPO_ICON[n.tipo] ?? '🔔'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-800 truncate">{n.titulo}</p>
+                      {n.mensaje && (
+                        <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{n.mensaje}</p>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {n.proyecto?.nombre && <span>{n.proyecto.nombre} · </span>}
+                        {new Date(n.createdAt).toLocaleString('es-MX', {
+                          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                    {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-slate-100 px-4 py-2">
+              <button
+                onClick={() => { setNotiAbierto(false); navigate('/proyectos/notificaciones') }}
+                className="w-full text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                Ver todas
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Logout */}
       <button

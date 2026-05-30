@@ -61,9 +61,11 @@ const obtenerProyecto = async (req, res) => {
             path: "tareas",
             populate: [
                 { path: "responsable", select: "nombre email" },
+                { path: "responsables", select: "nombre email" },
                 { path: "etiquetas", select: "nombre color" },
                 { path: "subtareas", select: "nombre estado" },
                 { path: "seccion", select: "nombre color" },
+                { path: "dependencias.tarea", select: "nombre estado" },
             ],
         })
         .populate("colaboradores.usuario", "nombre email")
@@ -315,6 +317,183 @@ const reordenarSecciones = async (req, res) => {
     res.json(secciones);
 };
 
+const exportarProyecto = async (req, res) => {
+    const { id } = req.params;
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: 'Proyecto no encontrado' });
+    if (!tieneAcceso(proyecto, req.usuario)) return res.status(401).json({ msg: 'Acción No Válida' });
+
+    const [etiquetas, todasTareas] = await Promise.all([
+        Etiqueta.find({ proyecto: id }),
+        Tarea.find({ proyecto: id }).populate('etiquetas', 'nombre color'),
+    ]);
+
+    const etiquetasMap = new Map();
+    const etiquetasExport = etiquetas.map((e, i) => {
+        const local = `et${i + 1}`;
+        etiquetasMap.set(e._id.toString(), local);
+        return { _idLocal: local, nombre: e.nombre, color: e.color };
+    });
+
+    const tareasMap = new Map();
+    todasTareas.forEach((t, i) => tareasMap.set(t._id.toString(), `t${i + 1}`));
+
+    const childrenOf = {};
+    todasTareas.forEach(t => {
+        if (t.tareaPadre) {
+            const pid = t.tareaPadre.toString();
+            if (!childrenOf[pid]) childrenOf[pid] = [];
+            childrenOf[pid].push(t);
+        }
+    });
+
+    const serializarTarea = (t) => ({
+        _idLocal: tareasMap.get(t._id.toString()),
+        nombre: t.nombre,
+        descripcion: t.descripcion,
+        estado: t.estado,
+        prioridad: t.prioridad,
+        fechaInicio: t.fechaInicio ?? null,
+        fechaEntrega: t.fechaEntrega ?? null,
+        tiempoEstimado: t.tiempoEstimado ?? null,
+        tiempoReal: t.tiempoReal ?? null,
+        completadaEn: t.completadaEn ?? null,
+        etiquetas: (t.etiquetas ?? []).map(e => etiquetasMap.get(e._id.toString())).filter(Boolean),
+        subtareas: (childrenOf[t._id.toString()] ?? []).map(serializarTarea),
+    });
+
+    const tareasRaiz = todasTareas.filter(t => !t.tareaPadre);
+
+    const payload = {
+        version: '1',
+        exportadoEn: new Date().toISOString(),
+        exportadoPor: req.usuario.email,
+        proyecto: {
+            nombre: proyecto.nombre,
+            descripcion: proyecto.descripcion,
+            cliente: proyecto.cliente,
+            fechaEntrega: proyecto.fechaEntrega ?? null,
+            fechaInicio: proyecto.fechaInicio ?? null,
+            area: proyecto.area ?? null,
+            color: proyecto.color,
+            estado: proyecto.estado,
+        },
+        etiquetas: etiquetasExport,
+        tareas: tareasRaiz.map(serializarTarea),
+    };
+
+    const slug = proyecto.nombre.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}_nexo.json"`);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.json(payload);
+};
+
+const importarProyecto = async (req, res) => {
+    const body = req.body;
+
+    if (!body || body.version !== '1') {
+        return res.status(400).json({ msg: 'Versión de archivo no soportada. Se requiere versión 1.' });
+    }
+
+    const { proyecto: p, etiquetas: etiquetasData = [], tareas: tareasData = [] } = body;
+
+    if (!p?.nombre?.trim() || !p?.descripcion?.trim() || !p?.cliente?.trim()) {
+        return res.status(400).json({ msg: 'El archivo de importación está incompleto (nombre, descripción o cliente faltantes).' });
+    }
+
+    const ESTADOS_PROYECTO = ['Activo', 'Pausado', 'Completado', 'Cancelado'];
+    const ESTADOS_TAREA = ['Pendiente', 'En Progreso', 'En Revisión', 'Completada'];
+    const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Urgente'];
+
+    let proyectoCreado = null;
+
+    try {
+        const existe = await Proyecto.findOne({ creador: req.usuario._id, nombre: p.nombre.trim() });
+        const nombre = existe ? `${p.nombre.trim()} (importado)` : p.nombre.trim();
+
+        proyectoCreado = await Proyecto.create({
+            nombre,
+            descripcion: p.descripcion.trim(),
+            cliente: p.cliente.trim(),
+            fechaEntrega: p.fechaEntrega || new Date(),
+            fechaInicio: p.fechaInicio || null,
+            area: p.area || null,
+            color: p.color || '#6366f1',
+            estado: ESTADOS_PROYECTO.includes(p.estado) ? p.estado : 'Activo',
+            creador: req.usuario._id,
+        });
+
+        const etiquetasIdMap = {};
+        for (const e of etiquetasData) {
+            if (!e._idLocal || !e.nombre?.trim()) continue;
+            const etiqueta = await Etiqueta.create({
+                nombre: e.nombre.trim(),
+                color: e.color || '#6366f1',
+                proyecto: proyectoCreado._id,
+            });
+            etiquetasIdMap[e._idLocal] = etiqueta._id;
+        }
+
+        const flatten = (lista, padreLocal = null) => {
+            const result = [];
+            for (const t of (lista || [])) {
+                result.push({ ...t, _padreLocal: padreLocal, subtareas: undefined });
+                if (t.subtareas?.length) result.push(...flatten(t.subtareas, t._idLocal));
+            }
+            return result;
+        };
+
+        const tareasPlanas = flatten(tareasData);
+        const tareasIdMap = {};
+
+        for (const t of tareasPlanas) {
+            if (!t._idLocal || !t.nombre?.trim()) continue;
+            const tarea = await Tarea.create({
+                nombre: t.nombre.trim(),
+                descripcion: t.descripcion?.trim() || '-',
+                estado: ESTADOS_TAREA.includes(t.estado) ? t.estado : 'Pendiente',
+                prioridad: PRIORIDADES.includes(t.prioridad) ? t.prioridad : 'Media',
+                fechaInicio: t.fechaInicio || null,
+                fechaEntrega: t.fechaEntrega || new Date(),
+                tiempoEstimado: t.tiempoEstimado || null,
+                tiempoReal: t.tiempoReal || null,
+                completadaEn: t.completadaEn || null,
+                etiquetas: (t.etiquetas || []).map(loc => etiquetasIdMap[loc]).filter(Boolean),
+                proyecto: proyectoCreado._id,
+            });
+            tareasIdMap[t._idLocal] = tarea._id;
+            proyectoCreado.tareas.push(tarea._id);
+        }
+        await proyectoCreado.save();
+
+        for (const t of tareasPlanas) {
+            if (!t._padreLocal || !t._idLocal) continue;
+            const tareaId = tareasIdMap[t._idLocal];
+            const padreId = tareasIdMap[t._padreLocal];
+            if (!tareaId || !padreId) continue;
+            await Promise.all([
+                Tarea.findByIdAndUpdate(tareaId, { tareaPadre: padreId }),
+                Tarea.findByIdAndUpdate(padreId, { $push: { subtareas: tareaId } }),
+            ]);
+        }
+
+        res.json({
+            msg: `Proyecto "${nombre}" importado correctamente`,
+            proyectoId: proyectoCreado._id,
+        });
+
+    } catch (error) {
+        if (proyectoCreado?._id) {
+            await Tarea.deleteMany({ proyecto: proyectoCreado._id }).catch(() => {});
+            await Etiqueta.deleteMany({ proyecto: proyectoCreado._id }).catch(() => {});
+            await Proyecto.findByIdAndDelete(proyectoCreado._id).catch(() => {});
+        }
+        console.error('Error en importarProyecto:', error);
+        res.status(500).json({ msg: 'Error al importar el proyecto. Los cambios han sido revertidos.' });
+    }
+};
+
 export {
     obtenerProyectos,
     obtenerProyecto,
@@ -331,4 +510,6 @@ export {
     actualizarSeccion,
     eliminarSeccion,
     reordenarSecciones,
+    exportarProyecto,
+    importarProyecto,
 };

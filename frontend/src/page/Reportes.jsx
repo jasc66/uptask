@@ -9,13 +9,18 @@ import DonutPrioridad from "../components/reportes/DonutPrioridad"
 import TablaCargaUsuarios from "../components/reportes/TablaCargaUsuarios"
 import ExportMenu from "../components/reportes/ExportMenu"
 import RealtimeBadge from "../components/reportes/RealtimeBadge"
+import FilterPanel, { FILTROS_VACIOS } from "../components/reportes/FilterPanel"
 
-const PERIODOS = [
-  { label: 'Esta semana', value: '7' },
-  { label: 'Este mes',    value: '30' },
-  { label: 'Últimos 3m',  value: '90' },
-  { label: 'Todo',        value: 'all' },
-]
+const buildParams = (filtros) => {
+  const p = new URLSearchParams()
+  if (filtros.fechaDesde) p.set('fechaDesde', filtros.fechaDesde)
+  if (filtros.fechaHasta) p.set('fechaHasta', filtros.fechaHasta)
+  if (filtros.prioridad?.length) p.set('prioridad', filtros.prioridad.join(','))
+  if (filtros.estadoProyecto) p.set('estadoProyecto', filtros.estadoProyecto)
+  if (filtros.area?.trim()) p.set('area', filtros.area.trim())
+  const qs = p.toString()
+  return qs ? `?${qs}` : ''
+}
 
 const KpiCard = ({ label, value, sub, color = 'indigo', carga }) => {
   const colores = {
@@ -56,7 +61,7 @@ const ChartCard = ({ titulo, descripcion, altura = 'h-48', children }) => (
 const Reportes = () => {
   const { auth } = useAuth()
   const reporteRef = useRef(null)
-  const [periodo, setPeriodo] = useState('all')
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   const [kpis, setKpis] = useState(null)
   const [proyectos, setProyectos] = useState([])
   const [porEstado, setPorEstado] = useState([])
@@ -68,20 +73,22 @@ const Reportes = () => {
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
   const [wsConectado, setWsConectado] = useState(false)
 
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (filtrosActuales) => {
     const token = localStorage.getItem('token')
     if (!token) return
     const config = { headers: { Authorization: `Bearer ${token}` } }
+    const qs = buildParams(filtrosActuales)
     setCargando(true)
     setError('')
     try {
+      const mesesParam = qs ? `${qs}&meses=6` : '?meses=6'
       const [resKpis, resProyectos, resEstado, resPrioridad, resEvolucion, resCarga] = await Promise.all([
-        clienteAxios.get('/reportes/kpis', config),
-        clienteAxios.get('/reportes/proyectos-resumen', config),
-        clienteAxios.get('/reportes/tareas-por-estado', config),
-        clienteAxios.get('/reportes/tareas-por-prioridad', config),
-        clienteAxios.get('/reportes/evolucion-mensual?meses=6', config),
-        clienteAxios.get('/reportes/carga-usuarios', config),
+        clienteAxios.get(`/reportes/kpis${qs}`, config),
+        clienteAxios.get(`/reportes/proyectos-resumen${qs}`, config),
+        clienteAxios.get(`/reportes/tareas-por-estado${qs}`, config),
+        clienteAxios.get(`/reportes/tareas-por-prioridad${qs}`, config),
+        clienteAxios.get(`/reportes/evolucion-mensual${mesesParam}`, config),
+        clienteAxios.get(`/reportes/carga-usuarios${qs}`, config),
       ])
       setKpis(resKpis.data)
       setProyectos(resProyectos.data)
@@ -98,14 +105,17 @@ const Reportes = () => {
   }, [])
 
   useEffect(() => {
-    cargar()
-  }, [cargar])
+    cargar(filtros)
+  }, [filtros])
 
   // Coalesce ráfagas de eventos socket — evita re-render por cada tarea actualizada
+  const filtrosRef = useRef(filtros)
+  useEffect(() => { filtrosRef.current = filtros }, [filtros])
+
   const debounceTimer = useRef(null)
   const recargarDebounced = useCallback(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    debounceTimer.current = setTimeout(() => cargar(), 400)
+    debounceTimer.current = setTimeout(() => cargar(filtrosRef.current), 400)
   }, [cargar])
 
   useEffect(() => () => debounceTimer.current && clearTimeout(debounceTimer.current), [])
@@ -149,21 +159,7 @@ const Reportes = () => {
             </svg>
             Personalizados
           </Link>
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-            {PERIODOS.map(p => (
-              <button
-                key={p.value}
-                onClick={() => setPeriodo(p.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  periodo === p.value
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <FilterPanel filtros={filtros} onChange={setFiltros} />
           <ExportMenu
             containerRef={reporteRef}
             datos={{ kpis, proyectos, porEstado, porPrioridad, evolucion, cargaUsuarios }}

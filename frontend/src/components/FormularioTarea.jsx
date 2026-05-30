@@ -18,6 +18,7 @@ const FormularioTarea = () => {
     submitTarea, alerta, mostrarAlerta, tareaEditar, proyecto,
     tareaDetalle, agregarComentario, etiquetasProyecto, crearEtiqueta,
     eliminarEtiqueta, agregarSubtarea, cambiarEstadoSubtarea, secciones,
+    agregarDependencia, eliminarDependencia,
   } = useProyectos()
   const { auth } = useAuth()
 
@@ -35,18 +36,22 @@ const FormularioTarea = () => {
   const [prioridad, setPrioridad] = useState('')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaEntrega, setFechaEntrega] = useState('')
-  const [responsable, setResponsable] = useState('')
+  const [responsables, setResponsables] = useState([])
   const [tareaId, setTareaId] = useState(null)
   const [tiempoEstimado, setTiempoEstimado] = useState('')
   const [tiempoReal, setTiempoReal] = useState('')
   const [comentario, setComentario] = useState('')
   const [enviandoComentario, setEnviandoComentario] = useState(false)
+  const [mostrarMenciones, setMostrarMenciones] = useState(false)
+  const [filtroMencion, setFiltroMencion] = useState('')
   const [seccionId, setSeccionId] = useState('')
   const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState([])
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState({ nombre: '', color: '#6366f1' })
   const [mostrarFormEtiqueta, setMostrarFormEtiqueta] = useState(false)
   const [nuevaSubtarea, setNuevaSubtarea] = useState('')
   const [mostrarFormSubtarea, setMostrarFormSubtarea] = useState(false)
+  const [mostrarFormDependencia, setMostrarFormDependencia] = useState(false)
+  const [nuevaDependencia, setNuevaDependencia] = useState({ tareaId: '', tipo: 'depende_de' })
 
   useEffect(() => {
     if (tareaEditar?._id) {
@@ -55,7 +60,11 @@ const FormularioTarea = () => {
       setPrioridad(tareaEditar.prioridad)
       setFechaInicio(tareaEditar.fechaInicio?.split('T')[0] ?? '')
       setFechaEntrega(tareaEditar.fechaEntrega?.split('T')[0] ?? '')
-      setResponsable(tareaEditar.responsable?._id ?? tareaEditar.responsable ?? '')
+      const respList = (tareaEditar.responsables ?? []).map(r => r._id ?? r)
+      if (respList.length === 0 && tareaEditar.responsable) {
+        respList.push(tareaEditar.responsable._id ?? tareaEditar.responsable)
+      }
+      setResponsables(respList)
       setTareaId(tareaEditar._id)
       setEtiquetasSeleccionadas(
         (tareaEditar.etiquetas ?? []).map(e => e._id ?? e)
@@ -69,7 +78,7 @@ const FormularioTarea = () => {
       setPrioridad('')
       setFechaInicio('')
       setFechaEntrega('')
-      setResponsable('')
+      setResponsables([])
       setTareaId(null)
       setEtiquetasSeleccionadas([])
       setTiempoEstimado('')
@@ -79,6 +88,8 @@ const FormularioTarea = () => {
     setMostrarFormEtiqueta(false)
     setMostrarFormSubtarea(false)
     setNuevaSubtarea('')
+    setMostrarFormDependencia(false)
+    setNuevaDependencia({ tareaId: '', tipo: 'depende_de' })
   }, [tareaEditar])
 
   const handleSubmit = async (e) => {
@@ -97,12 +108,16 @@ const FormularioTarea = () => {
       fechaInicio: fechaInicio || null,
       fechaEntrega,
       proyecto: id,
-      responsable: responsable || undefined,
+      responsables,
       etiquetas: etiquetasSeleccionadas,
       tiempoEstimado: tiempoEstimado !== '' ? Number(tiempoEstimado) : null,
       tiempoReal: tiempoReal !== '' ? Number(tiempoReal) : null,
       seccion: seccionId || null,
     })
+  }
+
+  const toggleResponsable = (uid) => {
+    setResponsables(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid])
   }
 
   const toggleEtiqueta = (etiquetaId) => {
@@ -128,12 +143,49 @@ const FormularioTarea = () => {
     setMostrarFormSubtarea(false)
   }
 
+  const handleAgregarDependencia = async () => {
+    if (!nuevaDependencia.tareaId) return
+    await agregarDependencia(tareaId, nuevaDependencia.tareaId, nuevaDependencia.tipo)
+    setNuevaDependencia({ tareaId: '', tipo: 'depende_de' })
+    setMostrarFormDependencia(false)
+  }
+
+  const handleEliminarDependencia = async (tareaDependenciaId) => {
+    await eliminarDependencia(tareaId, tareaDependenciaId)
+  }
+
   const handleComentario = async () => {
     if (!comentario.trim()) return
     setEnviandoComentario(true)
     await agregarComentario(tareaId, comentario.trim())
     setComentario('')
+    setMostrarMenciones(false)
+    setFiltroMencion('')
     setEnviandoComentario(false)
+  }
+
+  const handleComentarioChange = (e) => {
+    const valor = e.target.value
+    setComentario(valor)
+    const cursor = e.target.selectionStart
+    const previo = valor.slice(0, cursor)
+    const m = previo.match(/(?:^|\s)@([\w]*)$/i)
+    if (m) {
+      setFiltroMencion(m[1].toLowerCase())
+      setMostrarMenciones(true)
+    } else {
+      setMostrarMenciones(false)
+    }
+  }
+
+  const insertarMencion = (p) => {
+    const slug = p.nombre.trim().split(/\s+/)[0].toLowerCase()
+    setComentario(prev => prev.replace(/(?:^|\s)@([\w]*)$/i, (match) => {
+      const prefix = match.startsWith('@') ? '' : match.charAt(0)
+      return `${prefix}@${slug} `
+    }))
+    setMostrarMenciones(false)
+    setFiltroMencion('')
   }
 
   // Lista de participantes: creador + colaboradores
@@ -180,9 +232,13 @@ const FormularioTarea = () => {
                 Entrega: {new Date(fechaEntrega).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
               </span>
             )}
-            {responsable && participantes.find(p => p._id === responsable) && (
+            {responsables.length > 0 && (
               <span className="text-xs text-slate-500">
-                Responsable: {participantes.find(p => p._id === responsable)?.nombre}
+                {responsables.length === 1 ? 'Responsable: ' : 'Responsables: '}
+                {responsables
+                  .map(rid => participantes.find(p => p._id === rid)?.nombre)
+                  .filter(Boolean)
+                  .join(', ')}
               </span>
             )}
           </div>
@@ -314,20 +370,39 @@ const FormularioTarea = () => {
 
         {participantes.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="responsable">
-              Responsable
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Responsables
+              {responsables.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  {responsables.length} asignado{responsables.length === 1 ? '' : 's'}
+                </span>
+              )}
             </label>
-            <select
-              id="responsable"
-              value={responsable}
-              onChange={e => setResponsable(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            >
-              <option value="">— Sin asignar —</option>
-              {participantes.map(p => (
-                <option key={p._id} value={p._id}>{p.nombre}</option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-1.5">
+              {participantes.map(p => {
+                const sel = responsables.includes(p._id)
+                const inicial = p.nombre?.[0]?.toUpperCase() ?? '?'
+                return (
+                  <button
+                    key={p._id}
+                    type="button"
+                    onClick={() => toggleResponsable(p._id)}
+                    className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border transition-all ${
+                      sel
+                        ? 'border-indigo-600 bg-indigo-600 text-white'
+                        : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      sel ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'
+                    }`}>
+                      {inicial}
+                    </span>
+                    {p.nombre}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -504,6 +579,115 @@ const FormularioTarea = () => {
         </div>
       )}
 
+      {/* Dependencias — solo al editar */}
+      {tareaId && (
+        <div className="border-t border-slate-100 mt-5 pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-700">
+              Dependencias
+              {(tareaDetalle?.dependencias?.length ?? 0) > 0 && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  {tareaDetalle.dependencias.length}
+                </span>
+              )}
+            </h3>
+            {esEditorProyecto && (
+              <button
+                type="button"
+                onClick={() => setMostrarFormDependencia(v => !v)}
+                className="text-xs text-indigo-500 hover:text-indigo-700"
+              >
+                + Agregar
+              </button>
+            )}
+          </div>
+
+          {(tareaDetalle?.dependencias ?? []).length === 0 ? (
+            <p className="text-xs text-slate-400 mb-2">Sin dependencias</p>
+          ) : (
+            <ul className="space-y-1.5 mb-3">
+              {tareaDetalle.dependencias.map(dep => {
+                const tareaDep = dep.tarea
+                const completada = tareaDep?.estado === 'Completada'
+                const esBloqueante = dep.tipo === 'depende_de'
+                return (
+                  <li key={`${tareaDep?._id}-${dep.tipo}`} className="flex items-center gap-2 group/dep">
+                    <span
+                      className={`text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
+                        esBloqueante ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'
+                      }`}
+                      title={esBloqueante ? 'Esta tarea depende de la otra' : 'Esta tarea bloquea a la otra'}
+                    >
+                      {esBloqueante ? 'Depende de' : 'Bloquea a'}
+                    </span>
+                    <span className={`text-sm flex-1 truncate ${completada ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                      {tareaDep?.nombre ?? '—'}
+                    </span>
+                    {tareaDep?.estado && (
+                      <span className="text-xs text-slate-400 shrink-0">{tareaDep.estado}</span>
+                    )}
+                    {esEditorProyecto && tareaDep?._id && (
+                      <button
+                        type="button"
+                        onClick={() => handleEliminarDependencia(tareaDep._id)}
+                        className="opacity-0 group-hover/dep:opacity-100 text-slate-300 hover:text-red-500 transition-opacity"
+                        title="Eliminar dependencia"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {esEditorProyecto && mostrarFormDependencia && (
+            <div className="space-y-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+              <select
+                value={nuevaDependencia.tipo}
+                onChange={e => setNuevaDependencia(prev => ({ ...prev, tipo: e.target.value }))}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="depende_de">Esta tarea depende de…</option>
+                <option value="bloquea">Esta tarea bloquea a…</option>
+              </select>
+              <select
+                value={nuevaDependencia.tareaId}
+                onChange={e => setNuevaDependencia(prev => ({ ...prev, tareaId: e.target.value }))}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">— Selecciona tarea —</option>
+                {(proyecto.tareas ?? [])
+                  .filter(t => t._id !== tareaId && !t.tareaPadre)
+                  .map(t => (
+                    <option key={t._id} value={t._id}>{t.nombre}</option>
+                  ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleAgregarDependencia}
+                  disabled={!nuevaDependencia.tareaId}
+                  className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-medium rounded-lg"
+                >
+                  Vincular
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMostrarFormDependencia(false); setNuevaDependencia({ tareaId: '', tipo: 'depende_de' }) }}
+                  className="flex-1 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-medium rounded-lg"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sección de actividad — solo visible al editar una tarea existente */}
       {tareaId && (
         <div className="border-t border-slate-100 mt-5 pt-5 space-y-4">
@@ -547,14 +731,48 @@ const FormularioTarea = () => {
           </div>
 
           <div className="flex gap-2 items-end">
-            <textarea
-              value={comentario}
-              onChange={e => setComentario(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComentario() } }}
-              placeholder="Escribe un comentario… (Enter para enviar)"
-              rows={2}
-              className="flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-            />
+            <div className="flex-1 relative">
+              <textarea
+                value={comentario}
+                onChange={handleComentarioChange}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') { setMostrarMenciones(false); return }
+                  if (e.key === 'Enter' && !e.shiftKey && !mostrarMenciones) {
+                    e.preventDefault()
+                    handleComentario()
+                  }
+                }}
+                placeholder="Escribe un comentario… usa @ para mencionar"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              />
+              {mostrarMenciones && (() => {
+                const filtrados = participantes
+                  .filter(p => p.nombre.toLowerCase().includes(filtroMencion))
+                  .slice(0, 6)
+                if (filtrados.length === 0) return null
+                return (
+                  <div className="absolute bottom-full mb-1 left-0 z-20 w-56 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <p className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                      Mencionar a
+                    </p>
+                    {filtrados.map(p => (
+                      <button
+                        key={p._id}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); insertarMencion(p) }}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left"
+                      >
+                        <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {p.nombre?.[0]?.toUpperCase() ?? '?'}
+                        </span>
+                        <span className="text-sm text-slate-700 truncate">{p.nombre}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
             <button
               type="button"
               onClick={handleComentario}

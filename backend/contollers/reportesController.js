@@ -5,6 +5,59 @@ import Usuario from '../models/Usuario.js';
 
 const ESTADOS_VALIDOS = ['Pendiente', 'En Progreso', 'En Revisión', 'Completada'];
 const PRIORIDADES_VALIDAS = ['Baja', 'Media', 'Alta', 'Urgente'];
+const ESTADOS_PROYECTO_VALIDOS = ['Activo', 'Pausado', 'Completado', 'Cancelado'];
+
+// Parsea query params de filtro; devuelve fechaRange, filtrosEnum y narrowOpts
+const parseFiltros = (query) => {
+    const { fechaDesde, fechaHasta, prioridad, proyectoId, area, estadoProyecto } = query;
+
+    const fechaRange = {};
+    if (fechaDesde) fechaRange.$gte = new Date(fechaDesde);
+    if (fechaHasta) {
+        const h = new Date(fechaHasta);
+        h.setHours(23, 59, 59, 999);
+        fechaRange.$lte = h;
+    }
+    const hayFecha = !!(fechaRange.$gte || fechaRange.$lte);
+
+    const filtrosEnum = {};
+    if (prioridad) {
+        const arr = (Array.isArray(prioridad) ? prioridad : prioridad.split(','))
+            .filter(p => PRIORIDADES_VALIDAS.includes(p));
+        if (arr.length > 0) filtrosEnum.prioridad = { $in: arr };
+    }
+
+    const narrowOpts = {};
+    if (proyectoId && mongoose.Types.ObjectId.isValid(proyectoId)) {
+        narrowOpts.proyectoId = new mongoose.Types.ObjectId(proyectoId);
+    }
+    if (area?.trim()) narrowOpts.area = area.trim();
+    if (estadoProyecto && ESTADOS_PROYECTO_VALIDOS.includes(estadoProyecto)) {
+        narrowOpts.estadoProyecto = estadoProyecto;
+    }
+
+    return { fechaRange, filtrosEnum, narrowOpts, hayFecha };
+};
+
+// Restringe los IDs de proyectos visibles según narrowOpts (proyectoId, area, estadoProyecto)
+const applyNarrow = async (proyectosIds, narrowOpts) => {
+    let ids = proyectosIds;
+
+    if (narrowOpts.proyectoId) {
+        const oidStr = narrowOpts.proyectoId.toString();
+        ids = ids.filter(id => id.toString() === oidStr);
+    }
+
+    if (narrowOpts.area || narrowOpts.estadoProyecto) {
+        const q = { _id: { $in: ids } };
+        if (narrowOpts.area) q.area = { $regex: narrowOpts.area, $options: 'i' };
+        if (narrowOpts.estadoProyecto) q.estado = narrowOpts.estadoProyecto;
+        const ps = await Proyecto.find(q, '_id').lean();
+        ids = ps.map(p => p._id);
+    }
+
+    return ids;
+};
 
 // Devuelve los IDs de proyectos visibles para el usuario (row-level security)
 const getProyectosVisibles = async (usuario) => {
@@ -33,12 +86,18 @@ const tieneAcceso = (proyecto, usuario) => {
 // GET /api/reportes/kpis
 const getKpis = async (req, res) => {
     try {
-        const proyectosIds = await getProyectosVisibles(req.usuario);
+        const { fechaRange, filtrosEnum, narrowOpts, hayFecha } = parseFiltros(req.query);
+        const proyectosIdsBase = await getProyectosVisibles(req.usuario);
+        const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
         const ahora = new Date();
         const hace7Dias = new Date(ahora);
         hace7Dias.setDate(ahora.getDate() - 7);
 
-        const matchBase = { proyecto: { $in: proyectosIds }, tareaPadre: null };
+        const base = { proyecto: { $in: proyectosIds }, tareaPadre: null, ...filtrosEnum };
+
+        // Construir matchVencidas intersectando el rango de fechas con $lt:ahora
+        const fechaVencidaCond = { $lt: ahora, ...(hayFecha && fechaRange.$gte ? { $gte: fechaRange.$gte } : {}) };
+        const matchVencidaSemana = { $gte: hace7Dias, $lt: ahora };
 
         const [
             proyectosActivos,
@@ -49,11 +108,11 @@ const getKpis = async (req, res) => {
             tareasVencidaSemana,
         ] = await Promise.all([
             Proyecto.countDocuments({ _id: { $in: proyectosIds }, fechaEntrega: { $gte: ahora } }),
-            Tarea.countDocuments(matchBase),
-            Tarea.countDocuments({ ...matchBase, estado: 'Completada' }),
-            Tarea.countDocuments({ ...matchBase, estado: { $ne: 'Completada' }, fechaEntrega: { $lt: ahora } }),
-            Tarea.countDocuments({ ...matchBase, estado: 'Completada', updatedAt: { $gte: hace7Dias } }),
-            Tarea.countDocuments({ ...matchBase, estado: { $ne: 'Completada' }, fechaEntrega: { $gte: hace7Dias, $lt: ahora } }),
+            Tarea.countDocuments({ ...base, ...(hayFecha ? { fechaEntrega: fechaRange } : {}) }),
+            Tarea.countDocuments({ ...base, estado: 'Completada', ...(hayFecha ? { fechaEntrega: fechaRange } : {}) }),
+            Tarea.countDocuments({ ...base, estado: { $ne: 'Completada' }, fechaEntrega: fechaVencidaCond }),
+            Tarea.countDocuments({ ...base, estado: 'Completada', updatedAt: { $gte: hace7Dias } }),
+            Tarea.countDocuments({ ...base, estado: { $ne: 'Completada' }, fechaEntrega: matchVencidaSemana }),
         ]);
 
         // Proyectos atrasados: fechaEntrega pasada y con al menos una tarea no completada
@@ -72,13 +131,16 @@ const getKpis = async (req, res) => {
             proyectosAtrasados = r[0]?.total ?? 0;
         }
 
+        const tareasTotalesCount = tareasTotales;
+        const tareasCompletadasCount = tareasCompletadas;
+
         res.json({
             totalProyectos: proyectosIds.length,
             proyectosActivos,
             proyectosAtrasados,
-            tareasPendientes: tareasTotales - tareasCompletadas,
+            tareasPendientes: tareasTotalesCount - tareasCompletadasCount,
             tareasVencidas,
-            cumplimientoPct: tareasTotales > 0 ? Math.round((tareasCompletadas / tareasTotales) * 100) : 0,
+            cumplimientoPct: tareasTotalesCount > 0 ? Math.round((tareasCompletadasCount / tareasTotalesCount) * 100) : 0,
             tareasCompletadasSemana,
             tareasVencidaSemana,
         });
@@ -91,13 +153,17 @@ const getKpis = async (req, res) => {
 // GET /api/reportes/tareas-por-estado
 const getTareasPorEstado = async (req, res) => {
     try {
-        const proyectosIds = await getProyectosVisibles(req.usuario);
+        const { fechaRange, filtrosEnum, narrowOpts, hayFecha } = parseFiltros(req.query);
+        const proyectosIdsBase = await getProyectosVisibles(req.usuario);
+        const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
         const resultado = await Tarea.aggregate([
             {
                 $match: {
                     proyecto: { $in: proyectosIds },
                     tareaPadre: null,
                     estado: { $in: ESTADOS_VALIDOS },
+                    ...filtrosEnum,
+                    ...(hayFecha ? { fechaEntrega: fechaRange } : {}),
                 },
             },
             { $group: { _id: '$estado', count: { $sum: 1 } } },
@@ -114,13 +180,16 @@ const getTareasPorEstado = async (req, res) => {
 // GET /api/reportes/tareas-por-prioridad
 const getTareasPorPrioridad = async (req, res) => {
     try {
-        const proyectosIds = await getProyectosVisibles(req.usuario);
+        const { fechaRange, narrowOpts, hayFecha } = parseFiltros(req.query);
+        const proyectosIdsBase = await getProyectosVisibles(req.usuario);
+        const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
         const resultado = await Tarea.aggregate([
             {
                 $match: {
                     proyecto: { $in: proyectosIds },
                     tareaPadre: null,
                     prioridad: { $in: PRIORIDADES_VALIDAS },
+                    ...(hayFecha ? { fechaEntrega: fechaRange } : {}),
                 },
             },
             { $group: { _id: '$prioridad', count: { $sum: 1 } } },
@@ -138,7 +207,9 @@ const getTareasPorPrioridad = async (req, res) => {
 const getEvolucionMensual = async (req, res) => {
     try {
         const meses = Math.max(1, Math.min(24, parseInt(req.query.meses) || 6));
-        const proyectosIds = await getProyectosVisibles(req.usuario);
+        const { narrowOpts } = parseFiltros(req.query);
+        const proyectosIdsBase = await getProyectosVisibles(req.usuario);
+        const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
         const ahora = new Date();
         const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth() - meses + 1, 1);
 
@@ -180,19 +251,35 @@ const getEvolucionMensual = async (req, res) => {
 // GET /api/reportes/carga-usuarios
 const getCargaUsuarios = async (req, res) => {
     try {
-        const proyectosIds = await getProyectosVisibles(req.usuario);
+        const { fechaRange, filtrosEnum, narrowOpts, hayFecha } = parseFiltros(req.query);
+        const proyectosIdsBase = await getProyectosVisibles(req.usuario);
+        const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
         const ahora = new Date();
         const resultado = await Tarea.aggregate([
             {
                 $match: {
                     proyecto: { $in: proyectosIds },
-                    responsable: { $exists: true, $ne: null },
                     tareaPadre: null,
+                    ...filtrosEnum,
+                    ...(hayFecha ? { fechaEntrega: fechaRange } : {}),
                 },
             },
             {
+                $addFields: {
+                    responsablesEfectivos: {
+                        $cond: [
+                            { $gt: [{ $size: { $ifNull: ['$responsables', []] } }, 0] },
+                            '$responsables',
+                            { $cond: [{ $ifNull: ['$responsable', false] }, ['$responsable'], []] },
+                        ],
+                    },
+                },
+            },
+            { $match: { 'responsablesEfectivos.0': { $exists: true } } },
+            { $unwind: '$responsablesEfectivos' },
+            {
                 $group: {
-                    _id: '$responsable',
+                    _id: '$responsablesEfectivos',
                     tareasAbiertas: { $sum: { $cond: [{ $ne: ['$estado', 'Completada'] }, 1, 0] } },
                     tareasCompletadas: { $sum: { $cond: [{ $eq: ['$estado', 'Completada'] }, 1, 0] } },
                     tareasVencidas: {
@@ -235,7 +322,9 @@ const getCargaUsuarios = async (req, res) => {
 // GET /api/reportes/proyectos-resumen
 const getProyectosResumen = async (req, res) => {
     try {
-        const proyectosIds = await getProyectosVisibles(req.usuario);
+        const { narrowOpts } = parseFiltros(req.query);
+        const proyectosIdsBase = await getProyectosVisibles(req.usuario);
+        const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
         const ahora = new Date();
         const resultado = await Proyecto.aggregate([
             { $match: { _id: { $in: proyectosIds } } },
@@ -319,6 +408,7 @@ const getReporteProyecto = async (req, res) => {
 
         const tareas = await Tarea.find({ proyecto: proyectoId, tareaPadre: null })
             .populate('responsable', 'nombre email')
+            .populate('responsables', 'nombre email')
             .lean();
 
         const totalTareas = tareas.length;
@@ -347,7 +437,10 @@ const getReporteProyecto = async (req, res) => {
         const colaboradores = todosIds.map(uid => {
             const uidStr = uid.toString();
             const u = usuariosMap[uidStr];
-            const tareasUsuario = tareas.filter(t => t.responsable?._id?.toString() === uidStr);
+            const tareasUsuario = tareas.filter(t => {
+                if (t.responsable?._id?.toString() === uidStr) return true;
+                return (t.responsables ?? []).some(r => (r?._id ?? r)?.toString() === uidStr);
+            });
             const esCreador = uidStr === proyecto.creador.toString();
             const colabEntry = proyecto.colaboradores.find(c => c.usuario.toString() === uidStr);
             const rol = esCreador ? 'creador' : (colabEntry?.rol ?? 'editor');
@@ -430,7 +523,7 @@ const getReporteUsuario = async (req, res) => {
 
         const tareas = await Tarea.find({
             proyecto: { $in: proyectosIds },
-            responsable: targetObjectId,
+            $or: [{ responsable: targetObjectId }, { responsables: targetObjectId }],
             tareaPadre: null,
         }).lean();
 
@@ -445,7 +538,7 @@ const getReporteUsuario = async (req, res) => {
             {
                 $match: {
                     proyecto: { $in: proyectosIds },
-                    responsable: targetObjectId,
+                    $or: [{ responsable: targetObjectId }, { responsables: targetObjectId }],
                     estado: 'Completada',
                     tareaPadre: null,
                 },
@@ -474,7 +567,7 @@ const getReporteUsuario = async (req, res) => {
             {
                 $match: {
                     proyecto: { $in: proyectosIds },
-                    responsable: targetObjectId,
+                    $or: [{ responsable: targetObjectId }, { responsables: targetObjectId }],
                     estado: 'Completada',
                     completadaEn: { $ne: null },
                     tareaPadre: null,

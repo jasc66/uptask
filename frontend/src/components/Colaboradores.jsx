@@ -36,7 +36,7 @@ const Colaboradores = () => {
   const { colaboradores = [] } = proyecto
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 mt-6">
+    <div className="bg-white rounded-xl border border-slate-200 p-6">
       <h2 className="font-semibold text-slate-800 mb-4">
         Colaboradores
         <span className="ml-2 text-xs font-normal text-slate-400">

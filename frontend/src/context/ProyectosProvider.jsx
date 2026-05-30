@@ -426,6 +426,100 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    const exportarProyecto = async (proyectoId, nombreProyecto) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob',
+            }
+            const { data } = await clienteAxios.get(`/proyectos/${proyectoId}/exportar`, config)
+            const url = URL.createObjectURL(data)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${(nombreProyecto || 'proyecto').replace(/[^a-z0-9]/gi, '_').toLowerCase()}_nexo.json`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        } catch (error) {
+            mostrarAlerta({ msg: 'Error al exportar el proyecto', error: true })
+        }
+    }
+
+    const importarProyecto = async (jsonData) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post('/proyectos/importar', jsonData, config)
+            const { data: proyectosData } = await clienteAxios('/proyectos', config)
+            setProyectos(proyectosData)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al importar el proyecto', error: true })
+            return null
+        }
+    }
+
+    const agregarDependencia = async (tareaId, tareaDependenciaId, tipo) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(
+                `/tareas/dependencia/${tareaId}`,
+                { tareaDependenciaId, tipo },
+                config
+            )
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t => {
+                    if (t._id === data.origen._id) return { ...t, dependencias: data.origen.dependencias }
+                    if (t._id === data.destino._id) return { ...t, dependencias: data.destino.dependencias }
+                    return t
+                })
+            }))
+            setTareaDetalle(prev => prev && prev._id === data.origen._id
+                ? { ...prev, dependencias: data.origen.dependencias }
+                : prev
+            )
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al agregar dependencia', error: true })
+            return null
+        }
+    }
+
+    const eliminarDependencia = async (tareaId, tareaDependenciaId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = {
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                data: { tareaDependenciaId },
+            }
+            const { data } = await clienteAxios.delete(`/tareas/dependencia/${tareaId}`, config)
+            setProyecto(prev => ({
+                ...prev,
+                tareas: prev.tareas?.map(t => {
+                    if (t._id === data.origen._id) return { ...t, dependencias: data.origen.dependencias }
+                    if (t._id === data.destino._id) return { ...t, dependencias: data.destino.dependencias }
+                    return t
+                })
+            }))
+            setTareaDetalle(prev => prev && prev._id === data.origen._id
+                ? { ...prev, dependencias: data.origen.dependencias }
+                : prev
+            )
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar dependencia', error: true })
+            return null
+        }
+    }
+
     const moverTareaASeccion = async (tareaId, seccionId) => {
         try {
             const token = localStorage.getItem('token')
@@ -513,6 +607,10 @@ const ProyectosProvider = ({children}) => {
                 reordenarSecciones,
                 moverTareaASeccion,
                 actualizarFechaTarea,
+                exportarProyecto,
+                importarProyecto,
+                agregarDependencia,
+                eliminarDependencia,
             }}
             >{children}
 

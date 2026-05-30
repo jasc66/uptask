@@ -10,12 +10,13 @@ import proyectoRoutes from "./routes/proyectoRoutes.js";
 import tareaRoutes from "./routes/tareaRoutes.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
 import busquedaRoutes from "./routes/busquedaRoutes.js";
+import notificacionRoutes from "./routes/notificacionRoutes.js";
 import { initSocket } from "./socket.js";
 import { initScheduler } from "./helpers/reporteScheduler.js";
 
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 conectarDB();
 
@@ -46,6 +47,7 @@ app.use("/api/proyectos", proyectoRoutes);
 app.use("/api/tareas", tareaRoutes);
 app.use("/api/reportes", reportesRoutes);
 app.use("/api/buscar", busquedaRoutes);
+app.use("/api/notificaciones", notificacionRoutes);
 
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
