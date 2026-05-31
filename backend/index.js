@@ -12,6 +12,7 @@ import reportesRoutes from "./routes/reportesRoutes.js";
 import busquedaRoutes from "./routes/busquedaRoutes.js";
 import notificacionRoutes from "./routes/notificacionRoutes.js";
 import plantillaRoutes from "./routes/plantillaRoutes.js";
+import portafolioRoutes from "./routes/portafolioRoutes.js";
 import { initSocket } from "./socket.js";
 import { initScheduler } from "./helpers/reporteScheduler.js";
 import { initRecurrenciaScheduler } from "./helpers/recurrenciaScheduler.js";
@@ -52,6 +53,7 @@ app.use("/api/reportes", reportesRoutes);
 app.use("/api/buscar", busquedaRoutes);
 app.use("/api/notificaciones", notificacionRoutes);
 app.use("/api/plantillas", plantillaRoutes);
+app.use("/api/portafolios", portafolioRoutes);
 
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);

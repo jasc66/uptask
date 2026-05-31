@@ -21,6 +21,8 @@ const ProyectosProvider = ({children}) => {
     const [secciones, setSecciones] = useState([])
     const [plantillas, setPlantillas] = useState([])
     const [camposProyecto, setCamposProyecto] = useState([])
+    const [portafolios, setPortafolios] = useState([])
+    const [portafolioActual, setPortafolioActual] = useState(null)
     const prevAuthId = useRef(undefined)
 
     useEffect(()=>{
@@ -688,6 +690,133 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    // --- Portafolios ---
+    const obtenerPortafolios = async () => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios('/portafolios', config)
+            setPortafolios(data)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const obtenerPortafolioById = async (id) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios(`/portafolios/${id}`, config)
+            setPortafolioActual(data)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const crearPortafolio = async (datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post('/portafolios', datos, config)
+            setPortafolios(prev => [...prev, data])
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear portafolio', error: true })
+            return null
+        }
+    }
+
+    const actualizarPortafolio = async (id, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/portafolios/${id}`, datos, config)
+            setPortafolios(prev => prev.map(p => p._id === id ? { ...p, ...data } : p))
+            setPortafolioActual(prev => prev?._id === id ? { ...prev, ...data } : prev)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar portafolio', error: true })
+        }
+    }
+
+    const eliminarPortafolio = async (id) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/portafolios/${id}`, config)
+            setPortafolios(prev => prev.filter(p => p._id !== id))
+            if (portafolioActual?._id === id) setPortafolioActual(null)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar portafolio', error: true })
+        }
+    }
+
+    const agregarProyectoPortafolio = async (portafolioId, proyectoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/portafolios/${portafolioId}/proyectos`, { proyectoId }, config)
+            setPortafolioActual(prev => prev ? { ...prev, proyectos: [...(prev.proyectos ?? []), data] } : prev)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al agregar proyecto', error: true })
+        }
+    }
+
+    const quitarProyectoPortafolio = async (portafolioId, proyectoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/portafolios/${portafolioId}/proyectos/${proyectoId}`, config)
+            setPortafolioActual(prev => prev ? { ...prev, proyectos: prev.proyectos.filter(p => p._id !== proyectoId) } : prev)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al quitar proyecto', error: true })
+        }
+    }
+
+    const crearMetaPortafolio = async (portafolioId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/portafolios/${portafolioId}/metas`, datos, config)
+            setPortafolioActual(prev => prev ? { ...prev, metas: [...(prev.metas ?? []), data] } : prev)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear meta', error: true })
+            return null
+        }
+    }
+
+    const actualizarMetaPortafolio = async (portafolioId, metaId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/portafolios/${portafolioId}/metas/${metaId}`, datos, config)
+            setPortafolioActual(prev => prev ? { ...prev, metas: prev.metas.map(m => m._id === metaId ? data : m) } : prev)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar meta', error: true })
+        }
+    }
+
+    const eliminarMetaPortafolio = async (portafolioId, metaId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/portafolios/${portafolioId}/metas/${metaId}`, config)
+            setPortafolioActual(prev => prev ? { ...prev, metas: prev.metas.filter(m => m._id !== metaId) } : prev)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar meta', error: true })
+        }
+    }
+
     const agregarColaborador = async (proyectoId, datos) => {
         try {
             const token = localStorage.getItem('token')
@@ -772,6 +901,18 @@ const ProyectosProvider = ({children}) => {
                 crearPlantillaDesdeProyecto,
                 eliminarPlantilla,
                 crearProyectoDesdePlantilla,
+                portafolios,
+                portafolioActual,
+                obtenerPortafolios,
+                obtenerPortafolioById,
+                crearPortafolio,
+                actualizarPortafolio,
+                eliminarPortafolio,
+                agregarProyectoPortafolio,
+                quitarProyectoPortafolio,
+                crearMetaPortafolio,
+                actualizarMetaPortafolio,
+                eliminarMetaPortafolio,
             }}
             >{children}
 
