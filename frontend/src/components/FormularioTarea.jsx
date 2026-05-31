@@ -19,6 +19,7 @@ const FormularioTarea = () => {
     tareaDetalle, agregarComentario, etiquetasProyecto, crearEtiqueta,
     eliminarEtiqueta, agregarSubtarea, cambiarEstadoSubtarea, secciones,
     agregarDependencia, eliminarDependencia, subirAdjunto, eliminarAdjunto,
+    camposProyecto,
   } = useProyectos()
   const { auth } = useAuth()
 
@@ -56,6 +57,12 @@ const FormularioTarea = () => {
   const [subiendoArchivo, setSubiendoArchivo] = useState(false)
   const fileInputRef = useRef(null)
 
+  const [recurrenciaActiva, setRecurrenciaActiva] = useState(false)
+  const [patronRecurrencia, setPatronRecurrencia] = useState('semanal')
+  const [intervaloRecurrencia, setIntervaloRecurrencia] = useState(1)
+  const [finRecurrencia, setFinRecurrencia] = useState('')
+  const [valoresCampos, setValoresCampos] = useState({})
+
   useEffect(() => {
     if (tareaEditar?._id) {
       setNombre(tareaEditar.nombre)
@@ -75,6 +82,16 @@ const FormularioTarea = () => {
       setTiempoEstimado(tareaEditar.tiempoEstimado ?? '')
       setTiempoReal(tareaEditar.tiempoReal ?? '')
       setSeccionId(tareaEditar.seccion?._id ?? tareaEditar.seccion ?? '')
+      const rec = tareaEditar.recurrencia
+      setRecurrenciaActiva(rec?.activa ?? false)
+      setPatronRecurrencia(rec?.patron ?? 'semanal')
+      setIntervaloRecurrencia(rec?.intervalo ?? 1)
+      setFinRecurrencia(rec?.finRecurrencia?.split('T')[0] ?? '')
+      const vals = {}
+      for (const cv of tareaEditar.camposPersonalizados ?? []) {
+        vals[cv.campo?._id ?? cv.campo] = cv.valor
+      }
+      setValoresCampos(vals)
     } else {
       setNombre('')
       setDescripcion('')
@@ -87,6 +104,11 @@ const FormularioTarea = () => {
       setTiempoEstimado('')
       setTiempoReal('')
       setSeccionId('')
+      setRecurrenciaActiva(false)
+      setPatronRecurrencia('semanal')
+      setIntervaloRecurrencia(1)
+      setFinRecurrencia('')
+      setValoresCampos({})
     }
     setMostrarFormEtiqueta(false)
     setMostrarFormSubtarea(false)
@@ -116,6 +138,15 @@ const FormularioTarea = () => {
       tiempoEstimado: tiempoEstimado !== '' ? Number(tiempoEstimado) : null,
       tiempoReal: tiempoReal !== '' ? Number(tiempoReal) : null,
       seccion: seccionId || null,
+      recurrencia: {
+        activa: recurrenciaActiva,
+        patron: patronRecurrencia,
+        intervalo: Number(intervaloRecurrencia) || 1,
+        finRecurrencia: finRecurrencia || null,
+      },
+      camposPersonalizados: Object.entries(valoresCampos)
+        .filter(([, v]) => v !== '' && v !== null && v !== undefined)
+        .map(([campo, valor]) => ({ campo, valor })),
     })
   }
 
@@ -342,6 +373,56 @@ const FormularioTarea = () => {
           </div>
         </div>
 
+        {/* Recurrencia */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={recurrenciaActiva}
+              onChange={e => setRecurrenciaActiva(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-sm font-medium text-slate-700">Esta tarea se repite 🔁</span>
+          </label>
+
+          {recurrenciaActiva && (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600 whitespace-nowrap">Repetir cada</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={intervaloRecurrencia}
+                  onChange={e => setIntervaloRecurrencia(e.target.value)}
+                  className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                <select
+                  value={patronRecurrencia}
+                  onChange={e => setPatronRecurrencia(e.target.value)}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="diaria">Día(s)</option>
+                  <option value="semanal">Semana(s)</option>
+                  <option value="mensual">Mes(es)</option>
+                  <option value="anual">Año(s)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">
+                  Fecha de finalización (opcional)
+                </label>
+                <input
+                  type="date"
+                  value={finRecurrencia}
+                  onChange={e => setFinRecurrencia(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="prioridad">
             Prioridad
@@ -515,6 +596,66 @@ const FormularioTarea = () => {
             )}
           </div>
         ) : null}
+
+        {/* Campos personalizados */}
+        {camposProyecto?.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Campos personalizados</label>
+            <div className="space-y-2">
+              {camposProyecto.map(campo => (
+                <div key={campo._id} className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500 w-28 shrink-0 truncate" title={campo.nombre}>
+                    {campo.nombre}
+                  </span>
+                  {campo.tipo === 'texto' && (
+                    <input
+                      type="text"
+                      value={valoresCampos[campo._id] ?? ''}
+                      onChange={e => setValoresCampos(prev => ({ ...prev, [campo._id]: e.target.value }))}
+                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                  {campo.tipo === 'numero' && (
+                    <input
+                      type="number"
+                      value={valoresCampos[campo._id] ?? ''}
+                      onChange={e => setValoresCampos(prev => ({ ...prev, [campo._id]: e.target.value }))}
+                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                  {campo.tipo === 'fecha' && (
+                    <input
+                      type="date"
+                      value={valoresCampos[campo._id] ? String(valoresCampos[campo._id]).split('T')[0] : ''}
+                      onChange={e => setValoresCampos(prev => ({ ...prev, [campo._id]: e.target.value }))}
+                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                  {campo.tipo === 'checkbox' && (
+                    <input
+                      type="checkbox"
+                      checked={!!valoresCampos[campo._id]}
+                      onChange={e => setValoresCampos(prev => ({ ...prev, [campo._id]: e.target.checked }))}
+                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                  )}
+                  {campo.tipo === 'select' && (
+                    <select
+                      value={valoresCampos[campo._id] ?? ''}
+                      onChange={e => setValoresCampos(prev => ({ ...prev, [campo._id]: e.target.value }))}
+                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">— Seleccionar —</option>
+                      {(campo.opciones ?? []).map(op => (
+                        <option key={op} value={op}>{op}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           type="submit"

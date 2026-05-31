@@ -9,12 +9,15 @@ import Alerta from "../components/Alerta"
 import ReportesProyecto from "./ReportesProyecto"
 import CalendarioVista from "../components/CalendarioVista"
 import GanttVista from "../components/GanttVista"
+import StatusUpdates from "../components/StatusUpdates"
 
 const PRIORIDAD_COLOR = {
   Alta: 'bg-red-100 text-red-700',
   Media: 'bg-amber-100 text-amber-700',
   Baja: 'bg-emerald-100 text-emerald-700',
 }
+
+const TIPO_LABELS = { texto: 'Texto', numero: 'Número', select: 'Selección', fecha: 'Fecha', checkbox: 'Sí/No' }
 
 const ESTADO_COLOR = {
   'Pendiente':   'bg-slate-100 text-slate-500',
@@ -65,6 +68,10 @@ const Proyecto = () => {
     moverTareaASeccion,
     actualizarFechaTarea,
     exportarProyecto,
+    crearPlantillaDesdeProyecto,
+    camposProyecto,
+    crearCampo,
+    eliminarCampo,
   } = useProyectos()
   const { auth } = useAuth()
 
@@ -81,6 +88,14 @@ const Proyecto = () => {
   const [mostrarNuevaSeccion, setMostrarNuevaSeccion] = useState(false)
   const [nuevaSeccionNombre, setNuevaSeccionNombre] = useState('')
   const [mostrarColaboradores, setMostrarColaboradores] = useState(false)
+  const [modalPlantilla, setModalPlantilla] = useState(false)
+  const [nombrePlantilla, setNombrePlantilla] = useState('')
+  const [guardandoPlantilla, setGuardandoPlantilla] = useState(false)
+  const [mostrarPanelCampos, setMostrarPanelCampos] = useState(false)
+  const [camposOcultosEnLista, setCamposOcultosEnLista] = useState(new Set())
+  const [nuevoCampo, setNuevoCampo] = useState({ nombre: '', tipo: 'texto', opciones: '' })
+  const [mostrarFormCampo, setMostrarFormCampo] = useState(false)
+  const [guardandoCampo, setGuardandoCampo] = useState(false)
 
   const toggleSeccion = (estado) =>
     setSeccionesColapsadas(prev => ({ ...prev, [estado]: !prev[estado] }))
@@ -206,6 +221,38 @@ const Proyecto = () => {
     await eliminarSeccion(proyecto._id, seccionId)
   }
 
+  const toggleCampoEnLista = (campoId) => {
+    setCamposOcultosEnLista(prev => {
+      const next = new Set(prev)
+      next.has(campoId) ? next.delete(campoId) : next.add(campoId)
+      return next
+    })
+  }
+
+  const handleCrearCampo = async () => {
+    if (!nuevoCampo.nombre.trim()) return
+    setGuardandoCampo(true)
+    const opciones = nuevoCampo.tipo === 'select'
+      ? nuevoCampo.opciones.split(',').map(o => o.trim()).filter(Boolean)
+      : []
+    await crearCampo(proyecto._id, { nombre: nuevoCampo.nombre.trim(), tipo: nuevoCampo.tipo, opciones })
+    setNuevoCampo({ nombre: '', tipo: 'texto', opciones: '' })
+    setMostrarFormCampo(false)
+    setGuardandoCampo(false)
+  }
+
+  const handleEliminarCampo = async (campoId) => {
+    if (!window.confirm('¿Eliminar este campo? Se borrarán los valores en todas las tareas del proyecto.')) return
+    await eliminarCampo(proyecto._id, campoId)
+  }
+
+  const formatearValorCampo = (tipo, valor) => {
+    if (valor === undefined || valor === null || valor === '') return null
+    if (tipo === 'checkbox') return valor ? '✓' : null
+    if (tipo === 'fecha') return new Date(valor).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+    return String(valor)
+  }
+
   const moverSeccionIzq = (seccionId) => {
     const idx = secciones.findIndex(s => s._id === seccionId)
     if (idx <= 0) return
@@ -232,7 +279,12 @@ const Proyecto = () => {
         puedeEditarEstado ? 'cursor-grab active:cursor-grabbing' : ''
       } ${dragTareaId === tarea._id ? 'opacity-40' : 'opacity-100'}`}
     >
-      <p className="text-sm font-medium text-slate-800 mb-1">{tarea.nombre}</p>
+      <p className="text-sm font-medium text-slate-800 mb-1 flex items-center gap-1">
+        {tarea.nombre}
+        {tarea.recurrencia?.activa && (
+          <span title="Tarea recurrente" className="text-indigo-400 text-xs">🔁</span>
+        )}
+      </p>
       {tarea.descripcion && (
         <p className="text-xs text-slate-400 mb-2 line-clamp-2">{tarea.descripcion}</p>
       )}
@@ -399,6 +451,35 @@ const Proyecto = () => {
           </button>
           {puedeAdministrar && (
             <button
+              onClick={() => setMostrarPanelCampos(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              title="Gestionar campos personalizados"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />
+              </svg>
+              Campos
+              {camposProyecto?.length > 0 && (
+                <span className="min-w-[20px] h-5 flex items-center justify-center text-xs font-bold rounded-full px-1.5 bg-indigo-100 text-indigo-700">
+                  {camposProyecto.length}
+                </span>
+              )}
+            </button>
+          )}
+          {puedeAdministrar && (
+            <button
+              onClick={() => { setNombrePlantilla(nombre ?? ''); setModalPlantilla(true) }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              title="Guardar proyecto como plantilla reutilizable"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Plantilla
+            </button>
+          )}
+          {puedeAdministrar && (
+            <button
               onClick={() => handleModalEditarProyecto(proyecto)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             >
@@ -560,6 +641,28 @@ const Proyecto = () => {
                         {e.nombre}
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+              {camposProyecto?.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1.5">Columnas de campos</p>
+                  <div className="flex flex-wrap gap-1">
+                    {camposProyecto.map(c => {
+                      const visible = !camposOcultosEnLista.has(c._id)
+                      return (
+                        <button key={c._id} onClick={() => toggleCampoEnLista(c._id)}
+                          className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border transition-all ${
+                            visible
+                              ? 'bg-indigo-100 text-indigo-700 border-indigo-200 ring-1 ring-indigo-300 ring-offset-1'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {visible && <span className="text-indigo-500">✓</span>}
+                          {c.nombre}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -828,10 +931,13 @@ const Proyecto = () => {
                           <li key={tarea._id} className="group flex items-start justify-between py-3 gap-3">
                             <div className="min-w-0 flex-1">
                               <p
-                                className={`text-sm font-medium text-slate-800 truncate ${puedeVerDetalle ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
+                                className={`text-sm font-medium text-slate-800 truncate flex items-center gap-1 ${puedeVerDetalle ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
                                 onClick={puedeVerDetalle ? () => handleModalEditarTarea(tarea) : undefined}
                               >
                                 {tarea.nombre}
+                                {tarea.recurrencia?.activa && (
+                                  <span title="Tarea recurrente" className="text-indigo-400 text-xs shrink-0">🔁</span>
+                                )}
                               </p>
                               {tarea.etiquetas?.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-0.5">
@@ -885,6 +991,28 @@ const Proyecto = () => {
                                   }
                                 </p>
                               )}
+                              {(() => {
+                                const visibles = (camposProyecto ?? []).filter(c => !camposOcultosEnLista.has(c._id))
+                                if (!visibles.length) return null
+                                const pares = visibles.flatMap(c => {
+                                  const cv = tarea.camposPersonalizados?.find(
+                                    x => (x.campo?._id?.toString() ?? x.campo?.toString() ?? '') === c._id.toString()
+                                  )
+                                  const display = formatearValorCampo(c.tipo, cv?.valor)
+                                  return display !== null ? [{ campo: c, display }] : []
+                                })
+                                if (!pares.length) return null
+                                return (
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {pares.map(({ campo, display }) => (
+                                      <span key={campo._id} className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md">
+                                        <span className="text-slate-400 font-medium">{campo.nombre}:</span>
+                                        {display}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )
+                              })()}
                             </div>
                             <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                               {puedeEditarEstado ? (
@@ -961,6 +1089,219 @@ const Proyecto = () => {
           </div>
         )}
       </div>
+
+      {/* Status Updates */}
+      <div className="mt-6">
+        <StatusUpdates
+          proyectoId={proyecto._id}
+          statusUpdates={proyecto.statusUpdates ?? []}
+          puedePublicar={puedeAdministrar || puedeEditarEstado}
+        />
+      </div>
+
+      {/* Modal Guardar como plantilla */}
+      {modalPlantilla && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-slate-800">Guardar como plantilla</h2>
+              <button
+                onClick={() => setModalPlantilla(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              Se guardará la estructura de tareas como plantilla reutilizable (sin responsables ni comentarios).
+            </p>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre de la plantilla</label>
+            <input
+              type="text"
+              value={nombrePlantilla}
+              onChange={e => setNombrePlantilla(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent mb-5"
+              placeholder="Ej. Sprint de 2 semanas"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalPlantilla(false)}
+                className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={guardandoPlantilla || !nombrePlantilla.trim()}
+                onClick={async () => {
+                  setGuardandoPlantilla(true)
+                  await crearPlantillaDesdeProyecto(proyecto._id, { nombre: nombrePlantilla.trim() })
+                  setGuardandoPlantilla(false)
+                  setModalPlantilla(false)
+                }}
+                className="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {guardandoPlantilla ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Guardando...
+                  </>
+                ) : 'Guardar plantilla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Drawer Campos Personalizados */}
+      {mostrarPanelCampos && (
+        <div
+          onClick={() => setMostrarPanelCampos(false)}
+          className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm"
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-slate-50 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+          mostrarPanelCampos ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        aria-hidden={!mostrarPanelCampos}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-semibold text-slate-800">Campos personalizados</h2>
+              <p className="text-xs text-slate-400">Atributos extra para las tareas</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMostrarPanelCampos(false)}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {(camposProyecto ?? []).length === 0 && !mostrarFormCampo ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h8m-8 6h16" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-500">Sin campos aún</p>
+              <p className="text-xs text-slate-400 mt-1">Crea campos para agregar información extra a las tareas</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {(camposProyecto ?? []).map(c => (
+                <li key={c._id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{c.nombre}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600">
+                        {TIPO_LABELS[c.tipo]}
+                      </span>
+                      {c.tipo === 'select' && c.opciones?.length > 0 && (
+                        <span className="text-xs text-slate-400 truncate">
+                          {c.opciones.join(' · ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleEliminarCampo(c._id)}
+                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                    title="Eliminar campo"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {mostrarFormCampo ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+              <p className="text-sm font-semibold text-slate-700">Nuevo campo</p>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Nombre</label>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="ej. URL de referencia"
+                  value={nuevoCampo.nombre}
+                  onChange={e => setNuevoCampo(prev => ({ ...prev, nombre: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && handleCrearCampo()}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
+                <select
+                  value={nuevoCampo.tipo}
+                  onChange={e => setNuevoCampo(prev => ({ ...prev, tipo: e.target.value, opciones: '' }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Object.entries(TIPO_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </div>
+              {nuevoCampo.tipo === 'select' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Opciones (separadas por coma)</label>
+                  <input
+                    type="text"
+                    placeholder="ej. Bajo, Medio, Alto"
+                    value={nuevoCampo.opciones}
+                    onChange={e => setNuevoCampo(prev => ({ ...prev, opciones: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleCrearCampo}
+                  disabled={!nuevoCampo.nombre.trim() || guardandoCampo}
+                  className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  {guardandoCampo ? 'Guardando...' : 'Crear campo'}
+                </button>
+                <button
+                  onClick={() => { setMostrarFormCampo(false); setNuevoCampo({ nombre: '', tipo: 'texto', opciones: '' }) }}
+                  className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setMostrarFormCampo(true)}
+              className="flex items-center gap-2 w-full px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/50 transition-all text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Agregar campo
+            </button>
+          )}
+        </div>
+      </aside>
 
       {/* Drawer Colaboradores — deslizable desde la derecha */}
       {mostrarColaboradores && (

@@ -5,6 +5,7 @@ import Usuario from "../models/Usuario.js";
 import { emitirEventoTarea } from "../socket.js";
 import { crearNotificacion, extraerMenciones } from "../helpers/notificaciones.js";
 import { uploadBuffer, deleteAsset } from "../helpers/cloudinary.js";
+import { calcNextDate } from "../helpers/recurrenciaScheduler.js";
 
 // --- helpers de permisos ---
 const esCreador = (proyecto, usuarioId) =>
@@ -56,6 +57,19 @@ const agregarTarea = async (req, res) => {
         const { etiquetas, tiempoEstimado, tiempoReal, seccion } = req.body;
         const responsables = normalizarResponsables(req.body);
         const responsablePrincipal = responsables[0] || null;
+
+        const recRaw = req.body.recurrencia;
+        const recurrencia = recRaw?.activa && recRaw.patron
+            ? {
+                activa:           true,
+                patron:           recRaw.patron,
+                intervalo:        Math.max(1, parseInt(recRaw.intervalo, 10) || 1),
+                diasSemana:       Array.isArray(recRaw.diasSemana) ? recRaw.diasSemana : [],
+                finRecurrencia:   recRaw.finRecurrencia || null,
+                proximaInstancia: calcNextDate(fechaEntrega, recRaw.patron, parseInt(recRaw.intervalo, 10) || 1),
+              }
+            : { activa: false };
+
         const tareaAlmacenada = await Tarea.create({
             nombre, descripcion, prioridad, fechaInicio, fechaEntrega, proyecto,
             ...(responsablePrincipal ? { responsable: responsablePrincipal } : {}),
@@ -64,6 +78,8 @@ const agregarTarea = async (req, res) => {
             ...(tiempoEstimado != null ? { tiempoEstimado } : {}),
             ...(tiempoReal != null ? { tiempoReal } : {}),
             ...(seccion ? { seccion } : {}),
+            ...(req.body.camposPersonalizados?.length ? { camposPersonalizados: req.body.camposPersonalizados } : {}),
+            recurrencia,
         });
         await Proyecto.findByIdAndUpdate(existeProyecto._id, {
             $push: { tareas: tareaAlmacenada._id },
@@ -102,7 +118,8 @@ const obtenerTarea = async (req, res) => {
             .populate({ path: "subtareas", select: "nombre estado" })
             .populate({ path: "dependencias.tarea", select: "nombre estado fechaEntrega" })
             .populate({ path: "actividad.usuario", select: "nombre" })
-            .populate({ path: "actividad.menciones", select: "nombre" });
+            .populate({ path: "actividad.menciones", select: "nombre" })
+            .populate({ path: "camposPersonalizados.campo", select: "nombre tipo opciones" });
 
         if (!tarea) {
             return res.status(404).json({ msg: "Tarea no encontrada" });
@@ -151,6 +168,25 @@ const actualizarTarea = async (req, res) => {
         if (req.body.tiempoEstimado !== undefined) tarea.tiempoEstimado = req.body.tiempoEstimado;
         if (req.body.tiempoReal !== undefined) tarea.tiempoReal = req.body.tiempoReal;
         if (req.body.seccion !== undefined) tarea.seccion = req.body.seccion || null;
+
+        if (req.body.camposPersonalizados !== undefined) tarea.camposPersonalizados = req.body.camposPersonalizados;
+
+        if (req.body.recurrencia !== undefined) {
+            const recRaw = req.body.recurrencia;
+            if (recRaw?.activa && recRaw.patron) {
+                const fechaBase = tarea.fechaEntrega;
+                tarea.recurrencia = {
+                    activa:           true,
+                    patron:           recRaw.patron,
+                    intervalo:        Math.max(1, parseInt(recRaw.intervalo, 10) || 1),
+                    diasSemana:       Array.isArray(recRaw.diasSemana) ? recRaw.diasSemana : [],
+                    finRecurrencia:   recRaw.finRecurrencia || null,
+                    proximaInstancia: calcNextDate(fechaBase, recRaw.patron, parseInt(recRaw.intervalo, 10) || 1),
+                };
+            } else {
+                tarea.recurrencia = { activa: false };
+            }
+        }
 
         let nuevasAsignaciones = [];
         if (enviaResponsables) {

@@ -19,6 +19,8 @@ const ProyectosProvider = ({children}) => {
     const [misTareas, setMisTareas] = useState([])
     const [etiquetasProyecto, setEtiquetasProyecto] = useState([])
     const [secciones, setSecciones] = useState([])
+    const [plantillas, setPlantillas] = useState([])
+    const [camposProyecto, setCamposProyecto] = useState([])
     const prevAuthId = useRef(undefined)
 
     useEffect(()=>{
@@ -233,14 +235,16 @@ const ProyectosProvider = ({children}) => {
                     Authorization: `Bearer ${token}`
                 }
             }
-            const [{ data }, { data: etiquetas }, { data: seccionesData }] = await Promise.all([
+            const [{ data }, { data: etiquetas }, { data: seccionesData }, { data: camposData }] = await Promise.all([
                 clienteAxios(`/proyectos/${id}`, config),
                 clienteAxios(`/proyectos/${id}/etiquetas`, config),
                 clienteAxios(`/proyectos/${id}/secciones`, config),
+                clienteAxios(`/proyectos/${id}/campos`, config),
             ])
             setProyecto(data.proyecto)
             setEtiquetasProyecto(etiquetas)
             setSecciones(seccionesData)
+            setCamposProyecto(camposData)
         } catch (error) {
             console.log(error)
         }finally {
@@ -270,6 +274,44 @@ const ProyectosProvider = ({children}) => {
             setEtiquetasProyecto(prev => prev.filter(e => e._id !== etiquetaId))
         } catch (error) {
             mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar etiqueta', error: true })
+        }
+    }
+
+    const crearCampo = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/campos`, datos, config)
+            setCamposProyecto(prev => [...prev, data])
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear campo', error: true })
+        }
+    }
+
+    const actualizarCampo = async (proyectoId, campoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/proyectos/${proyectoId}/campos/${campoId}`, datos, config)
+            setCamposProyecto(prev => prev.map(c => c._id === campoId ? data : c))
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar campo', error: true })
+        }
+    }
+
+    const eliminarCampo = async (proyectoId, campoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/proyectos/${proyectoId}/campos/${campoId}`, config)
+            setCamposProyecto(prev => prev.filter(c => c._id !== campoId))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar campo', error: true })
         }
     }
 
@@ -554,6 +596,79 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    const agregarStatusUpdate = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/status-update`, datos, config)
+            setProyecto(prev => ({
+                ...prev,
+                statusUpdates: [...(prev.statusUpdates ?? []), data],
+            }))
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al publicar el status update', error: true })
+            return null
+        }
+    }
+
+    const obtenerPlantillas = async () => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios('/plantillas', config)
+            setPlantillas(data)
+            return data
+        } catch (error) {
+            console.log(error)
+            return []
+        }
+    }
+
+    const crearPlantillaDesdeProyecto = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/plantillas/desde-proyecto/${proyectoId}`, datos, config)
+            setPlantillas(prev => [...prev, data])
+            mostrarAlerta({ msg: `Plantilla "${data.nombre}" guardada correctamente`, error: false })
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al guardar la plantilla', error: true })
+            return null
+        }
+    }
+
+    const eliminarPlantilla = async (plantillaId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/plantillas/${plantillaId}`, config)
+            setPlantillas(prev => prev.filter(p => p._id !== plantillaId))
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar la plantilla', error: true })
+        }
+    }
+
+    const crearProyectoDesdePlantilla = async (plantillaId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/desde-plantilla/${plantillaId}`, datos, config)
+            const { data: proyectosData } = await clienteAxios('/proyectos', config)
+            setProyectos(proyectosData)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear el proyecto desde plantilla', error: true })
+            return null
+        }
+    }
+
     const moverTareaASeccion = async (tareaId, seccionId) => {
         try {
             const token = localStorage.getItem('token')
@@ -631,6 +746,10 @@ const ProyectosProvider = ({children}) => {
                 etiquetasProyecto,
                 crearEtiqueta,
                 eliminarEtiqueta,
+                camposProyecto,
+                crearCampo,
+                actualizarCampo,
+                eliminarCampo,
                 agregarSubtarea,
                 cambiarEstadoSubtarea,
                 secciones,
@@ -647,6 +766,12 @@ const ProyectosProvider = ({children}) => {
                 eliminarDependencia,
                 subirAdjunto,
                 eliminarAdjunto,
+                agregarStatusUpdate,
+                plantillas,
+                obtenerPlantillas,
+                crearPlantillaDesdeProyecto,
+                eliminarPlantilla,
+                crearProyectoDesdePlantilla,
             }}
             >{children}
 

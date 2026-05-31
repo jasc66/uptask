@@ -7,6 +7,10 @@ import {
     eliminarProyecto,
     agregarColaborador,
     eliminarColaborador,
+    obtenerCampos,
+    crearCampo,
+    actualizarCampo,
+    eliminarCampo,
     obtenerEtiquetas,
     crearEtiqueta,
     eliminarEtiqueta,
@@ -17,6 +21,8 @@ import {
     reordenarSecciones,
     exportarProyecto,
     importarProyecto,
+    agregarStatusUpdate,
+    crearProyectoDesdePlantilla,
 } from "../contollers/proyectoController.js";
 import checkAuth from "../middleware/checkAuth.js";
 
@@ -40,6 +46,13 @@ router.get('/:id/exportar', checkAuth, exportarProyecto);
 router.post('/agregar-colaborador/:id', checkAuth, agregarColaborador)
 router.post('/eliminar-colaborador/:id', checkAuth, eliminarColaborador)
 
+router.route('/:id/campos')
+    .get(checkAuth, obtenerCampos)
+    .post(checkAuth, crearCampo)
+router.route('/:id/campos/:campoId')
+    .put(checkAuth, actualizarCampo)
+    .delete(checkAuth, eliminarCampo)
+
 router.route('/:id/etiquetas')
     .get(checkAuth, obtenerEtiquetas)
     .post(checkAuth, crearEtiqueta)
@@ -52,5 +65,8 @@ router.put('/:id/secciones/reordenar', checkAuth, reordenarSecciones)
 router.route('/:id/secciones/:seccionId')
     .put(checkAuth, actualizarSeccion)
     .delete(checkAuth, eliminarSeccion)
+
+router.post('/desde-plantilla/:plantillaId', checkAuth, crearProyectoDesdePlantilla);
+router.post('/:id/status-update', checkAuth, agregarStatusUpdate);
 
 export default router;

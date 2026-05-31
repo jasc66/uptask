@@ -62,6 +62,28 @@ const proyectosSchema = mongoose.Schema(
       trim: true,
       default: null,
     },
+    statusUpdates: [
+      {
+        estado: {
+          type: String,
+          enum: ['verde', 'amarillo', 'rojo'],
+          required: true,
+        },
+        resumen: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        autor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Usuario',
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

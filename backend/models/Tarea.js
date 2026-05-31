@@ -87,6 +87,20 @@ const tareaSchema = mongoose.Schema({
 			createdAt: { type: Date, default: Date.now },
 		}
 	],
+	camposPersonalizados: [
+		{
+			campo: { type: mongoose.Schema.Types.ObjectId, ref: 'CampoPersonalizado', required: true },
+			valor: { type: mongoose.Schema.Types.Mixed },
+		}
+	],
+	recurrencia: {
+		activa:           { type: Boolean, default: false },
+		patron:           { type: String, enum: ['diaria', 'semanal', 'mensual', 'anual'] },
+		intervalo:        { type: Number, default: 1, min: 1 },
+		diasSemana:       [{ type: Number, min: 0, max: 6 }],
+		finRecurrencia:   { type: Date, default: null },
+		proximaInstancia: { type: Date, default: null },
+	},
 
 }, {
 	timestamps: true,

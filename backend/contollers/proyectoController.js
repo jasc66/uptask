@@ -3,6 +3,8 @@ import Usuario from "../models/Usuario.js";
 import Etiqueta from "../models/Etiqueta.js";
 import Seccion from "../models/Seccion.js";
 import Tarea from "../models/Tarea.js";
+import PlantillaProyecto from "../models/PlantillaProyecto.js";
+import CampoPersonalizado from "../models/CampoPersonalizado.js";
 
 // --- helpers de permisos ---
 // Soportan creador/usuario como ObjectId (sin populate) o Document (con populate)
@@ -66,10 +68,12 @@ const obtenerProyecto = async (req, res) => {
                 { path: "subtareas", select: "nombre estado" },
                 { path: "seccion", select: "nombre color" },
                 { path: "dependencias.tarea", select: "nombre estado" },
+                { path: "camposPersonalizados.campo", select: "nombre tipo opciones" },
             ],
         })
         .populate("colaboradores.usuario", "nombre email")
-        .populate("creador", "nombre email");
+        .populate("creador", "nombre email")
+        .populate("statusUpdates.autor", "nombre email");
 
     if (!proyecto) {
         return res.status(404).json({ msg: "No Encontrado" });
@@ -178,6 +182,82 @@ const eliminarColaborador = async (req, res) => {
     await proyecto.save();
 
     res.json({ msg: "Colaborador eliminado" });
+};
+
+const obtenerCampos = async (req, res) => {
+    const { id } = req.params;
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!tieneAcceso(proyecto, req.usuario)) return res.status(401).json({ msg: "Acción No Válida" });
+
+    const campos = await CampoPersonalizado.find({ proyecto: id });
+    res.json(campos);
+};
+
+const crearCampo = async (req, res) => {
+    const { id } = req.params;
+    const { nombre, tipo, opciones } = req.body;
+
+    if (!nombre?.trim()) return res.status(400).json({ msg: "El nombre es obligatorio" });
+    if (!tipo) return res.status(400).json({ msg: "El tipo es obligatorio" });
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Acción No Válida" });
+    }
+
+    try {
+        const campo = await CampoPersonalizado.create({
+            nombre: nombre.trim(),
+            tipo,
+            opciones: tipo === 'select' ? (opciones ?? []) : [],
+            proyecto: id,
+        });
+        res.json(campo);
+    } catch (error) {
+        res.status(500).json({ msg: error.message });
+    }
+};
+
+const actualizarCampo = async (req, res) => {
+    const { id, campoId } = req.params;
+    const { nombre, opciones } = req.body;
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Acción No Válida" });
+    }
+
+    try {
+        const updates = {};
+        if (nombre?.trim()) updates.nombre = nombre.trim();
+        if (opciones !== undefined) updates.opciones = opciones;
+        const campo = await CampoPersonalizado.findByIdAndUpdate(campoId, updates, { new: true });
+        if (!campo) return res.status(404).json({ msg: "Campo no encontrado" });
+        res.json(campo);
+    } catch (error) {
+        res.status(500).json({ msg: error.message });
+    }
+};
+
+const eliminarCampo = async (req, res) => {
+    const { id, campoId } = req.params;
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: "Proyecto no encontrado" });
+    if (!esCreador(proyecto, req.usuario._id) && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ msg: "Acción No Válida" });
+    }
+
+    try {
+        await CampoPersonalizado.findByIdAndDelete(campoId);
+        await Tarea.updateMany({ proyecto: id }, { $pull: { camposPersonalizados: { campo: campoId } } });
+        res.json({ msg: "Campo eliminado" });
+    } catch (error) {
+        res.status(500).json({ msg: error.message });
+    }
 };
 
 const obtenerEtiquetas = async (req, res) => {
@@ -494,6 +574,94 @@ const importarProyecto = async (req, res) => {
     }
 };
 
+const agregarStatusUpdate = async (req, res) => {
+    const { id } = req.params;
+    const { estado, resumen } = req.body;
+
+    const ESTADOS_VALIDOS = ['verde', 'amarillo', 'rojo'];
+    if (!ESTADOS_VALIDOS.includes(estado)) {
+        return res.status(400).json({ msg: 'Estado inválido. Usa verde, amarillo o rojo.' });
+    }
+    if (!resumen?.trim()) {
+        return res.status(400).json({ msg: 'El resumen es obligatorio.' });
+    }
+
+    const proyecto = await Proyecto.findById(id);
+    if (!proyecto) return res.status(404).json({ msg: 'Proyecto no encontrado' });
+    if (!tieneAcceso(proyecto, req.usuario)) {
+        return res.status(401).json({ msg: 'Acción No Válida' });
+    }
+
+    const update = {
+        estado,
+        resumen: resumen.trim(),
+        autor: req.usuario._id,
+        createdAt: new Date(),
+    };
+
+    proyecto.statusUpdates.push(update);
+    await proyecto.save();
+
+    const populado = await Proyecto.findById(id).select('statusUpdates').populate('statusUpdates.autor', 'nombre email');
+    const ultimo = populado.statusUpdates[populado.statusUpdates.length - 1];
+    res.json(ultimo);
+};
+
+const crearProyectoDesdePlantilla = async (req, res) => {
+    const { plantillaId } = req.params;
+    const { nombre, descripcion, cliente, fechaInicio, fechaEntrega, area, color } = req.body;
+
+    const plantilla = await PlantillaProyecto.findById(plantillaId);
+    if (!plantilla) return res.status(404).json({ msg: 'Plantilla no encontrada' });
+
+    if (!nombre?.trim() || !cliente?.trim()) {
+        return res.status(400).json({ msg: 'Nombre y cliente son obligatorios.' });
+    }
+
+    const base = fechaInicio ? new Date(fechaInicio) : new Date();
+    base.setHours(0, 0, 0, 0);
+
+    const proyecto = await Proyecto.create({
+        nombre: nombre.trim(),
+        descripcion: descripcion?.trim() || plantilla.descripcion,
+        cliente: cliente.trim(),
+        fechaInicio: base,
+        fechaEntrega: fechaEntrega || new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000),
+        area: area || null,
+        color: color || '#6366f1',
+        creador: req.usuario._id,
+    });
+
+    const etiquetasIdMap = {};
+    for (const e of (plantilla.etiquetasBase || [])) {
+        const etiqueta = await Etiqueta.create({
+            nombre: e.nombre,
+            color: e.color,
+            proyecto: proyecto._id,
+        });
+        etiquetasIdMap[e.nombre] = etiqueta._id;
+    }
+
+    for (const t of (plantilla.tareasBase || [])) {
+        const inicio = new Date(base.getTime() + t.offsetDias * 24 * 60 * 60 * 1000);
+        const entrega = new Date(inicio.getTime() + (t.duracionDias || 1) * 24 * 60 * 60 * 1000);
+
+        const tarea = await Tarea.create({
+            nombre: t.nombre,
+            descripcion: t.descripcion || '-',
+            prioridad: t.prioridad || 'Media',
+            estado: 'Pendiente',
+            fechaInicio: inicio,
+            fechaEntrega: entrega,
+            proyecto: proyecto._id,
+        });
+        proyecto.tareas.push(tarea._id);
+    }
+    await proyecto.save();
+
+    res.json({ msg: `Proyecto "${proyecto.nombre}" creado desde plantilla`, proyectoId: proyecto._id });
+};
+
 export {
     obtenerProyectos,
     obtenerProyecto,
@@ -502,6 +670,10 @@ export {
     eliminarProyecto,
     agregarColaborador,
     eliminarColaborador,
+    obtenerCampos,
+    crearCampo,
+    actualizarCampo,
+    eliminarCampo,
     obtenerEtiquetas,
     crearEtiqueta,
     eliminarEtiqueta,
@@ -512,4 +684,6 @@ export {
     reordenarSecciones,
     exportarProyecto,
     importarProyecto,
+    agregarStatusUpdate,
+    crearProyectoDesdePlantilla,
 };

@@ -11,8 +11,11 @@ import tareaRoutes from "./routes/tareaRoutes.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
 import busquedaRoutes from "./routes/busquedaRoutes.js";
 import notificacionRoutes from "./routes/notificacionRoutes.js";
+import plantillaRoutes from "./routes/plantillaRoutes.js";
 import { initSocket } from "./socket.js";
 import { initScheduler } from "./helpers/reporteScheduler.js";
+import { initRecurrenciaScheduler } from "./helpers/recurrenciaScheduler.js";
+import { seedPlantillas } from "./contollers/plantillaController.js";
 
 
 const app = express();
@@ -48,6 +51,7 @@ app.use("/api/tareas", tareaRoutes);
 app.use("/api/reportes", reportesRoutes);
 app.use("/api/buscar", busquedaRoutes);
 app.use("/api/notificaciones", notificacionRoutes);
+app.use("/api/plantillas", plantillaRoutes);
 
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
@@ -56,4 +60,6 @@ initSocket(server);
 server.listen(PORT, ()=> {
 	console.log(`Servidor corriendo en el puerto ${PORT}`);
 	initScheduler();
+	initRecurrenciaScheduler();
+	seedPlantillas().catch(console.error);
 });

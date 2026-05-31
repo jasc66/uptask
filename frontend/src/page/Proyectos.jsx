@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import useProyectos from "../hooks/useProyectos"
 import useAuth from "../hooks/useAuth"
 import PreviewProyecto from "../components/PreviewProyecto"
+import ModalPlantillas from "../components/ModalPlantillas"
 
 const ESTADO_COLOR = {
   'Pendiente':   'bg-slate-100 text-slate-500',
@@ -30,6 +31,7 @@ const Proyectos = () => {
   const fileInputRef = useRef(null)
   const [modalImportar, setModalImportar] = useState(null)
   const [importando, setImportando] = useState(false)
+  const [mostrarPlantillas, setMostrarPlantillas] = useState(false)
 
   const ahora = new Date()
   const enUnaSemana = new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -170,6 +172,16 @@ const Proyectos = () => {
             Importar
           </button>
           <button
+            onClick={() => setMostrarPlantillas(true)}
+            className="flex items-center justify-center gap-2 flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-semibold rounded-lg transition-colors"
+            title="Crear proyecto desde una plantilla"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Plantillas
+          </button>
+          <button
             onClick={handleModalFormulario}
             className="flex items-center justify-center gap-2 flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
           >
@@ -273,6 +285,11 @@ const Proyectos = () => {
           </button>
         </div>
       )}
+      {/* Modal de Plantillas */}
+      {mostrarPlantillas && (
+        <ModalPlantillas onClose={() => setMostrarPlantillas(false)} />
+      )}
+
       {/* Modal de confirmación de importación */}
       {modalImportar && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
