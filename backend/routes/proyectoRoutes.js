@@ -24,6 +24,13 @@ import {
     agregarStatusUpdate,
     crearProyectoDesdePlantilla,
 } from "../contollers/proyectoController.js";
+import {
+    obtenerAutomatizaciones,
+    crearAutomatizacion,
+    actualizarAutomatizacion,
+    eliminarAutomatizacion,
+    toggleAutomatizacion,
+} from "../contollers/automatizacionController.js";
 import checkAuth from "../middleware/checkAuth.js";
 
 const router = express.Router();
@@ -68,5 +75,13 @@ router.route('/:id/secciones/:seccionId')
 
 router.post('/desde-plantilla/:plantillaId', checkAuth, crearProyectoDesdePlantilla);
 router.post('/:id/status-update', checkAuth, agregarStatusUpdate);
+
+router.route('/:id/automatizaciones')
+    .get(checkAuth, obtenerAutomatizaciones)
+    .post(checkAuth, crearAutomatizacion);
+router.route('/:id/automatizaciones/:automatizacionId')
+    .put(checkAuth, actualizarAutomatizacion)
+    .delete(checkAuth, eliminarAutomatizacion);
+router.post('/:id/automatizaciones/:automatizacionId/toggle', checkAuth, toggleAutomatizacion);
 
 export default router;

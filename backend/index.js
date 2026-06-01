@@ -16,6 +16,8 @@ import portafolioRoutes from "./routes/portafolioRoutes.js";
 import { initSocket } from "./socket.js";
 import { initScheduler } from "./helpers/reporteScheduler.js";
 import { initRecurrenciaScheduler } from "./helpers/recurrenciaScheduler.js";
+import { procesarVencimientoProximo } from "./helpers/automationEngine.js";
+import cron from "node-cron";
 import { seedPlantillas } from "./contollers/plantillaController.js";
 
 
@@ -64,4 +66,5 @@ server.listen(PORT, ()=> {
 	initScheduler();
 	initRecurrenciaScheduler();
 	seedPlantillas().catch(console.error);
+	cron.schedule('0 9 * * *', () => procesarVencimientoProximo().catch(console.error));
 });

@@ -690,6 +690,70 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    // --- Automatizaciones ---
+    const obtenerAutomatizaciones = async (proyectoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return []
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios(`/proyectos/${proyectoId}/automatizaciones`, config)
+            return data
+        } catch (error) {
+            console.log(error)
+            return []
+        }
+    }
+
+    const crearAutomatizacion = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/automatizaciones`, datos, config)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear automatización', error: true })
+            return null
+        }
+    }
+
+    const actualizarAutomatizacion = async (proyectoId, automatizacionId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.put(`/proyectos/${proyectoId}/automatizaciones/${automatizacionId}`, datos, config)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al actualizar automatización', error: true })
+            return null
+        }
+    }
+
+    const eliminarAutomatizacion = async (proyectoId, automatizacionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/proyectos/${proyectoId}/automatizaciones/${automatizacionId}`, config)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar automatización', error: true })
+        }
+    }
+
+    const toggleAutomatizacion = async (proyectoId, automatizacionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/automatizaciones/${automatizacionId}/toggle`, {}, config)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al cambiar estado', error: true })
+            return null
+        }
+    }
+
     // --- Portafolios ---
     const obtenerPortafolios = async () => {
         try {
@@ -901,6 +965,11 @@ const ProyectosProvider = ({children}) => {
                 crearPlantillaDesdeProyecto,
                 eliminarPlantilla,
                 crearProyectoDesdePlantilla,
+                obtenerAutomatizaciones,
+                crearAutomatizacion,
+                actualizarAutomatizacion,
+                eliminarAutomatizacion,
+                toggleAutomatizacion,
                 portafolios,
                 portafolioActual,
                 obtenerPortafolios,

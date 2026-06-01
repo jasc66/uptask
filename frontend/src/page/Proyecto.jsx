@@ -10,6 +10,7 @@ import ReportesProyecto from "./ReportesProyecto"
 import CalendarioVista from "../components/CalendarioVista"
 import GanttVista from "../components/GanttVista"
 import StatusUpdates from "../components/StatusUpdates"
+import AutomatizacionesVista from "../components/AutomatizacionesVista"
 
 const PRIORIDAD_COLOR = {
   Alta: 'bg-red-100 text-red-700',
@@ -547,10 +548,21 @@ const Proyecto = () => {
                 </svg>
                 Reportes
               </button>
+              {puedeAdministrar && (
+                <button
+                  onClick={() => setVista('automatizaciones')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'automatizaciones' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Reglas
+                </button>
+              )}
             </div>
           </div>
 
-          {vista !== 'reportes' && <div className="flex items-center gap-2">
+          {vista !== 'reportes' && vista !== 'automatizaciones' && <div className="flex items-center gap-2">
             {vista !== 'calendario' && vista !== 'gantt' && (tareas?.length > 0) && (
               <button
                 onClick={() => setMostrarFiltros(v => !v)}
@@ -586,7 +598,7 @@ const Proyecto = () => {
         </div>
 
         {/* Barra de filtros */}
-        {mostrarFiltros && vista !== 'reportes' && vista !== 'calendario' && vista !== 'gantt' && (
+        {mostrarFiltros && vista !== 'reportes' && vista !== 'calendario' && vista !== 'gantt' && vista !== 'automatizaciones' && (
           <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <div className="flex flex-wrap gap-x-6 gap-y-3">
               <div>
@@ -691,6 +703,15 @@ const Proyecto = () => {
           />
         ) : vista === 'reportes' ? (
           <ReportesProyecto proyectoId={params.id} embedded />
+        ) : vista === 'automatizaciones' ? (
+          <AutomatizacionesVista
+            proyectoId={params.id}
+            secciones={secciones ?? []}
+            colaboradores={[
+              ...(proyecto.creador ? [proyecto.creador] : []),
+              ...(proyecto.colaboradores ?? []).map(c => c.usuario ?? c).filter(Boolean)
+            ].filter(u => u?._id || u?.nombre)}
+          />
         ) : !tareas?.length ? (
           <div className={`flex flex-col items-center justify-center py-12 text-center ${vista === 'tablero' ? 'bg-white rounded-xl border border-slate-200' : ''}`}>
             <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
