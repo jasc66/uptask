@@ -389,7 +389,7 @@ const Proyecto = () => {
       {msg && <div className="mb-4"><Alerta alerta={alerta} /></div>}
 
       {/* Header compacto del proyecto */}
-      <div className="flex items-center justify-between mb-8 gap-4 bg-white rounded-xl border border-slate-200 px-5 py-4 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4 bg-white rounded-xl border border-slate-200 px-5 py-4 shadow-sm">
         <div className="flex items-center gap-4 min-w-0 flex-1">
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
@@ -425,16 +425,16 @@ const Proyecto = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
           <button
             onClick={() => setMostrarColaboradores(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             title="Ver colaboradores del proyecto"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            Equipo
+            <span className="hidden sm:inline">Equipo</span>
             {proyecto.colaboradores?.length > 0 && (
               <span className="min-w-[20px] h-5 flex items-center justify-center text-xs font-bold rounded-full px-1.5 bg-indigo-100 text-indigo-700">
                 {proyecto.colaboradores.length}
@@ -443,24 +443,24 @@ const Proyecto = () => {
           </button>
           <button
             onClick={() => exportarProyecto(proyecto._id, nombre)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             title="Exportar proyecto como JSON"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Exportar
+            <span className="hidden sm:inline">Exportar</span>
           </button>
           {puedeAdministrar && (
             <button
               onClick={() => setMostrarPanelCampos(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               title="Gestionar campos personalizados"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" />
               </svg>
-              Campos
+              <span className="hidden sm:inline">Campos</span>
               {camposProyecto?.length > 0 && (
                 <span className="min-w-[20px] h-5 flex items-center justify-center text-xs font-bold rounded-full px-1.5 bg-indigo-100 text-indigo-700">
                   {camposProyecto.length}
@@ -471,24 +471,25 @@ const Proyecto = () => {
           {puedeAdministrar && (
             <button
               onClick={() => { setNombrePlantilla(nombre ?? ''); setModalPlantilla(true) }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               title="Guardar proyecto como plantilla reutilizable"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              Plantilla
+              <span className="hidden sm:inline">Plantilla</span>
             </button>
           )}
           {puedeAdministrar && (
             <button
               onClick={() => handleModalEditarProyecto(proyecto)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              title="Editar proyecto"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              Editar
+              <span className="hidden sm:inline">Editar</span>
             </button>
           )}
         </div>
@@ -498,83 +499,85 @@ const Proyecto = () => {
       <div className={vista === 'tablero' || vista === 'reportes' || vista === 'calendario' || vista === 'gantt' ? '' : 'bg-white rounded-xl border border-slate-200 p-6'}>
 
         {/* Barra de controles */}
-        <div className={`flex items-center justify-between mb-4 ${vista === 'tablero' ? 'bg-white rounded-xl border border-slate-200 px-6 py-4' : ''}`}>
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-slate-800">Tareas</h2>
+        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 ${vista === 'tablero' ? 'bg-white rounded-xl border border-slate-200 px-6 py-4' : ''}`}>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <h2 className="font-semibold text-slate-800 shrink-0">Tareas</h2>
 
-            {/* Toggle Lista / Tablero / Reportes */}
-            <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
-              <button
-                onClick={() => setVista('lista')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'lista' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-                Lista
-              </button>
-              <button
-                onClick={() => setVista('tablero')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'tablero' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                </svg>
-                Tablero
-              </button>
-              <button
-                onClick={() => setVista('calendario')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'calendario' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Calendario
-              </button>
-              <button
-                onClick={() => setVista('gantt')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'gantt' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h8M4 12h12M4 18h6" />
-                </svg>
-                Gantt
-              </button>
-              <button
-                onClick={() => setVista('reportes')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'reportes' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Reportes
-              </button>
-              {puedeAdministrar && (
+            {/* Toggle vistas — scroll horizontal en mobile */}
+            <div className="overflow-x-auto flex-1 -mx-0.5 px-0.5" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+              <div className="flex items-center bg-slate-100 rounded-lg p-0.5 min-w-max">
                 <button
-                  onClick={() => setVista('automatizaciones')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'automatizaciones' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  onClick={() => setVista('lista')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'lista' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                   </svg>
-                  Reglas
+                  Lista
                 </button>
-              )}
-              {puedeAdministrar && (
                 <button
-                  onClick={() => setVista('integraciones')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'integraciones' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  onClick={() => setVista('tablero')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'tablero' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                   </svg>
-                  Integraciones
+                  Tablero
                 </button>
-              )}
+                <button
+                  onClick={() => setVista('calendario')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'calendario' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Calendario
+                </button>
+                <button
+                  onClick={() => setVista('gantt')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'gantt' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h8M4 12h12M4 18h6" />
+                  </svg>
+                  Gantt
+                </button>
+                <button
+                  onClick={() => setVista('reportes')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'reportes' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Reportes
+                </button>
+                {puedeAdministrar && (
+                  <button
+                    onClick={() => setVista('automatizaciones')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'automatizaciones' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Reglas
+                  </button>
+                )}
+                {puedeAdministrar && (
+                  <button
+                    onClick={() => setVista('integraciones')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'integraciones' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Integraciones
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {vista !== 'reportes' && vista !== 'automatizaciones' && vista !== 'integraciones' && <div className="flex items-center gap-2">
+          {vista !== 'reportes' && vista !== 'automatizaciones' && vista !== 'integraciones' && <div className="flex items-center gap-2 shrink-0">
             {vista !== 'calendario' && vista !== 'gantt' && (tareas?.length > 0) && (
               <button
                 onClick={() => setMostrarFiltros(v => !v)}
