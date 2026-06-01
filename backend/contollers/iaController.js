@@ -191,6 +191,91 @@ Responde ÚNICAMENTE con JSON (sin texto extra):
     }
 };
 
+// POST /api/ia/chat-proyecto/:id  (SSE streaming)
+export const chatProyecto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { mensaje, historial = [] } = req.body;
+
+        if (!mensaje?.trim()) return res.status(400).json({ msg: 'El mensaje es obligatorio' });
+
+        const proyecto = await Proyecto.findById(id).lean();
+        if (!proyecto) return res.status(404).json({ msg: 'Proyecto no encontrado' });
+
+        const esCreador = proyecto.creador.toString() === req.usuario._id.toString();
+        const esColaborador = proyecto.colaboradores.some(c => c.usuario.toString() === req.usuario._id.toString());
+        if (!esCreador && !esColaborador && req.usuario.rol !== 'admin') {
+            return res.status(403).json({ msg: 'Sin acceso' });
+        }
+
+        const ahora = new Date();
+        const tareas = await Tarea.find({ proyecto: id, tareaPadre: null })
+            .populate('responsables', 'nombre')
+            .lean();
+
+        const total = tareas.length;
+        const porEstado = { Pendiente: 0, 'En Progreso': 0, 'En Revisión': 0, Completada: 0 };
+        tareas.forEach(t => { if (porEstado[t.estado] !== undefined) porEstado[t.estado]++ });
+        const vencidas = tareas.filter(t => t.estado !== 'Completada' && t.fechaEntrega && new Date(t.fechaEntrega) < ahora).length;
+        const sinAsignar = tareas.filter(t => !t.responsable && !t.responsables?.length).length;
+
+        const listaTareas = tareas.slice(0, 30).map(t => {
+            const resps = t.responsables?.map(r => r.nombre).join(', ') || 'sin asignar';
+            const fecha = t.fechaEntrega ? new Date(t.fechaEntrega).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'sin fecha';
+            return `- [${t.estado}] ${t.nombre} (${t.prioridad}) | ${resps} | entrega: ${fecha}`;
+        }).join('\n');
+
+        const contexto = `Eres el asistente de IA del proyecto "${proyecto.nombre}". Tienes acceso completo a su estado y puedes responder preguntas en español de forma concisa y útil.
+
+DATOS DEL PROYECTO:
+Nombre: ${proyecto.nombre}
+Descripción: ${proyecto.descripcion ?? 'No especificada'}
+Estado: ${proyecto.estado}
+Fecha de entrega: ${proyecto.fechaEntrega ? new Date(proyecto.fechaEntrega).toLocaleDateString('es-MX', { dateStyle: 'long' }) : 'no definida'}
+Equipo: ${proyecto.colaboradores.length + 1} persona(s)
+
+RESUMEN DE TAREAS (${total} total):
+- Pendientes: ${porEstado.Pendiente}
+- En Progreso: ${porEstado['En Progreso']}
+- En Revisión: ${porEstado['En Revisión']}
+- Completadas: ${porEstado.Completada}
+- Vencidas: ${vencidas}
+- Sin asignar: ${sinAsignar}
+
+LISTA DE TAREAS:
+${listaTareas || 'Sin tareas registradas'}
+
+Responde siempre en español, de forma clara y directa. Si te preguntan algo que no está en los datos, dilo honestamente.`;
+
+        // SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+
+        const mensajes = [
+            { role: 'system', content: contexto },
+            ...historial.map(m => ({ role: m.rol === 'user' ? 'user' : 'assistant', content: m.contenido })),
+            { role: 'user', content: mensaje.trim() },
+        ];
+
+        await completarStream(mensajes, (chunk) => {
+            res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+        }, { temperatura: 0.6, maxTokens: 1024 });
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+    } catch (error) {
+        console.log('[IA] chatProyecto error:', error.message);
+        if (!res.headersSent) {
+            res.status(500).json({ msg: 'Error al procesar el chat' });
+        } else {
+            res.write(`data: ${JSON.stringify({ error: 'Error interno' })}\n\n`);
+            res.end();
+        }
+    }
+};
+
 // POST /api/ia/mejorar-descripcion
 export const mejorarDescripcion = async (req, res) => {
     try {

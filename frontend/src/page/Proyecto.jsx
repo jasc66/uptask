@@ -12,6 +12,7 @@ import GanttVista from "../components/GanttVista"
 import StatusUpdates from "../components/StatusUpdates"
 import AutomatizacionesVista from "../components/AutomatizacionesVista"
 import IntegracionesVista from "../components/IntegracionesVista"
+import ChatProyecto from "../components/ChatProyecto"
 import clienteAxios from "../config/clienteAxios"
 
 const PRIORIDAD_COLOR = {
@@ -1724,6 +1725,11 @@ const Proyecto = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Chat IA flotante — visible para todos los que tienen acceso al proyecto */}
+      {proyecto._id && (
+        <ChatProyecto proyectoId={proyecto._id} nombreProyecto={nombre} />
       )}
     </div>
   )
