@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import useProyectos from '../hooks/useProyectos'
+import clienteAxios from '../config/clienteAxios'
 
 const SEMAFORO = {
     verde: { bg: 'bg-emerald-500', ring: 'ring-emerald-400', label: 'En buen camino', text: 'text-emerald-700', light: 'bg-emerald-50 border-emerald-200' },
@@ -13,11 +14,28 @@ const StatusUpdates = ({ proyectoId, statusUpdates = [], puedePublicar }) => {
     const [estadoForm, setEstadoForm] = useState('verde')
     const [resumen, setResumen] = useState('')
     const [guardando, setGuardando] = useState(false)
+    const [generandoIA, setGenerandoIA] = useState(false)
     const [mostrarTodos, setMostrarTodos] = useState(false)
 
     const ultimoUpdate = statusUpdates.length > 0 ? statusUpdates[statusUpdates.length - 1] : null
     const historial = [...statusUpdates].reverse()
     const visibles = mostrarTodos ? historial : historial.slice(0, 3)
+
+    const generarConIA = async () => {
+        setGenerandoIA(true)
+        try {
+            const token = localStorage.getItem('token')
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/ia/resumen-proyecto/${proyectoId}`, {}, config)
+            setResumen(data.resumen ?? '')
+            setEstadoForm(data.colorSugerido ?? 'verde')
+            setMostrarForm(true)
+        } catch {
+            // silencia — el usuario puede seguir llenando manualmente
+        } finally {
+            setGenerandoIA(false)
+        }
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -50,15 +68,30 @@ const StatusUpdates = ({ proyectoId, statusUpdates = [], puedePublicar }) => {
                     )}
                 </div>
                 {puedePublicar && (
-                    <button
-                        onClick={() => setMostrarForm(prev => !prev)}
-                        className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Publicar update
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            onClick={generarConIA}
+                            disabled={generandoIA}
+                            title="Generar resumen con IA"
+                            className="flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            {generandoIA ? (
+                                <span className="w-3.5 h-3.5 border-2 border-violet-400 border-t-transparent rounded-full animate-spin inline-block" />
+                            ) : (
+                                <span>✨</span>
+                            )}
+                            {generandoIA ? 'Analizando…' : 'IA'}
+                        </button>
+                        <button
+                            onClick={() => setMostrarForm(prev => !prev)}
+                            className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Publicar update
+                        </button>
+                    </div>
                 )}
             </div>
 

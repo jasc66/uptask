@@ -3,8 +3,40 @@ import { useParams } from 'react-router-dom'
 import useProyectos from '../hooks/useProyectos'
 import useAuth from '../hooks/useAuth'
 import Alerta from './Alerta'
+import clienteAxios from '../config/clienteAxios'
 
 const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Urgente']
+
+const BtnMejorarIA = ({ nombre, descripcion, onMejorar, proyectoNombre }) => {
+  const [mejorando, setMejorando] = useState(false)
+  const mejorar = async () => {
+    setMejorando(true)
+    try {
+      const token = localStorage.getItem('token')
+      const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      const { data } = await clienteAxios.post('/ia/mejorar-descripcion', {
+        nombre, descripcion, contextoProyecto: proyectoNombre
+      }, config)
+      if (data.descripcion) onMejorar(data.descripcion)
+    } catch { /* silencioso */ }
+    finally { setMejorando(false) }
+  }
+  return (
+    <button
+      type="button"
+      onClick={mejorar}
+      disabled={mejorando}
+      className="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-2 py-0.5 rounded-md transition-colors disabled:opacity-50"
+      title="Mejorar descripción con IA"
+    >
+      {mejorando
+        ? <span className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin inline-block" />
+        : <span>✨</span>
+      }
+      {mejorando ? 'Mejorando…' : 'Mejorar con IA'}
+    </button>
+  )
+}
 const ESTADO_SUBTAREA_COLOR = {
   'Pendiente': 'bg-slate-100 text-slate-500',
   'En Progreso': 'bg-blue-100 text-blue-700',
@@ -332,9 +364,14 @@ const FormularioTarea = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="descripcion">
-            Descripción
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-slate-700" htmlFor="descripcion">
+              Descripción
+            </label>
+            {nombre.trim() && (
+              <BtnMejorarIA nombre={nombre} descripcion={descripcion} onMejorar={setDescripcion} proyectoNombre={proyecto?.nombre} />
+            )}
+          </div>
           <textarea
             id="descripcion"
             placeholder="Descripción de la tarea"

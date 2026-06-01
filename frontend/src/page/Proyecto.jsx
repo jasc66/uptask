@@ -12,6 +12,7 @@ import GanttVista from "../components/GanttVista"
 import StatusUpdates from "../components/StatusUpdates"
 import AutomatizacionesVista from "../components/AutomatizacionesVista"
 import IntegracionesVista from "../components/IntegracionesVista"
+import clienteAxios from "../config/clienteAxios"
 
 const PRIORIDAD_COLOR = {
   Alta: 'bg-red-100 text-red-700',
@@ -98,6 +99,11 @@ const Proyecto = () => {
   const [nuevoCampo, setNuevoCampo] = useState({ nombre: '', tipo: 'texto', opciones: '' })
   const [mostrarFormCampo, setMostrarFormCampo] = useState(false)
   const [guardandoCampo, setGuardandoCampo] = useState(false)
+  const [modalPlanIA, setModalPlanIA] = useState(false)
+  const [generandoPlan, setGenerandoPlan] = useState(false)
+  const [tareasGeneradas, setTareasGeneradas] = useState([])
+  const [creandoTareasIA, setCreandoTareasIA] = useState(false)
+  const [seleccionadas, setSeleccionadas] = useState(new Set())
 
   const toggleSeccion = (estado) =>
     setSeccionesColapsadas(prev => ({ ...prev, [estado]: !prev[estado] }))
@@ -270,6 +276,61 @@ const Proyecto = () => {
     ;[nuevoOrden[idx], nuevoOrden[idx + 1]] = [nuevoOrden[idx + 1], nuevoOrden[idx]]
     reordenarSecciones(proyecto._id, nuevoOrden)
   }
+
+  // --- IA: Generador de plan ---
+  const abrirGeneradorPlan = async () => {
+    setTareasGeneradas([])
+    setSeleccionadas(new Set())
+    setModalPlanIA(true)
+    setGenerandoPlan(true)
+    try {
+      const token = localStorage.getItem('token')
+      const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      const { data } = await clienteAxios.post('/ia/generar-plan', {
+        nombre: proyecto.nombre,
+        descripcion: proyecto.descripcion,
+        fechaEntrega: proyecto.fechaEntrega,
+      }, config)
+      const con_id = data.tareas.map((t, i) => ({ ...t, _uid: i }))
+      setTareasGeneradas(con_id)
+      setSeleccionadas(new Set(con_id.map(t => t._uid)))
+    } catch {
+      setModalPlanIA(false)
+    } finally {
+      setGenerandoPlan(false)
+    }
+  }
+
+  const crearTareasIASeleccionadas = async () => {
+    const elegidas = tareasGeneradas.filter(t => seleccionadas.has(t._uid))
+    if (!elegidas.length) return
+    setCreandoTareasIA(true)
+    try {
+      const token = localStorage.getItem('token')
+      const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      const base = proyecto.fechaInicio ? new Date(proyecto.fechaInicio) : new Date()
+      for (const t of elegidas) {
+        const fecha = new Date(base)
+        fecha.setDate(fecha.getDate() + (t.offsetDias ?? 0))
+        await clienteAxios.post('/tareas', {
+          proyecto: proyecto._id,
+          nombre: t.nombre,
+          descripcion: t.descripcion,
+          prioridad: t.prioridad,
+          fechaEntrega: fecha.toISOString(),
+        }, config)
+      }
+      await obtenerProyecto(params.id)
+      setModalPlanIA(false)
+    } catch { /* silencioso */ }
+    finally { setCreandoTareasIA(false) }
+  }
+
+  const toggleSeleccionada = (uid) => setSeleccionadas(prev => {
+    const next = new Set(prev)
+    next.has(uid) ? next.delete(uid) : next.add(uid)
+    return next
+  })
 
   const renderTarjetaKanban = (tarea) => (
     <div
@@ -451,6 +512,16 @@ const Proyecto = () => {
             </svg>
             <span className="hidden sm:inline">Exportar</span>
           </button>
+          {puedeAdministrar && (
+            <button
+              onClick={abrirGeneradorPlan}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-violet-600 bg-violet-50 border border-violet-200 rounded-lg hover:bg-violet-100 transition-colors"
+              title="Generar plan de tareas con IA"
+            >
+              <span>✨</span>
+              <span className="hidden sm:inline">Plan IA</span>
+            </button>
+          )}
           {puedeAdministrar && (
             <button
               onClick={() => setMostrarPanelCampos(true)}
@@ -1383,6 +1454,103 @@ const Proyecto = () => {
         <Modal titulo={puedeEditarEstado ? "Tarea" : "Detalle de tarea"} onClose={handleModalTarea}>
           <FormularioTarea />
         </Modal>
+      )}
+
+      {/* Modal Plan IA */}
+      {modalPlanIA && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <span>✨</span> Plan generado con IA
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Selecciona las tareas que quieres crear</p>
+              </div>
+              <button onClick={() => setModalPlanIA(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {generandoPlan ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-slate-500">Analizando el proyecto y generando tareas…</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs text-slate-500">{seleccionadas.size} de {tareasGeneradas.length} seleccionadas</span>
+                    <button
+                      onClick={() => setSeleccionadas(seleccionadas.size === tareasGeneradas.length ? new Set() : new Set(tareasGeneradas.map(t => t._uid)))}
+                      className="text-xs text-indigo-600 hover:underline"
+                    >
+                      {seleccionadas.size === tareasGeneradas.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
+                    </button>
+                  </div>
+                  {tareasGeneradas.map(t => (
+                    <div
+                      key={t._uid}
+                      onClick={() => toggleSeleccionada(t._uid)}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        seleccionadas.has(t._uid) ? 'border-violet-300 bg-violet-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
+                        seleccionadas.has(t._uid) ? 'bg-violet-600 border-violet-600' : 'border-slate-300'
+                      }`}>
+                        {seleccionadas.has(t._uid) && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-slate-800">{t.nombre}</p>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                            t.prioridad === 'Urgente' ? 'bg-red-100 text-red-700' :
+                            t.prioridad === 'Alta' ? 'bg-amber-100 text-amber-700' :
+                            t.prioridad === 'Media' ? 'bg-blue-100 text-blue-700' :
+                            'bg-slate-100 text-slate-500'
+                          }`}>{t.prioridad}</span>
+                          {t.duracionDias > 0 && (
+                            <span className="text-[10px] text-slate-400">{t.duracionDias}d</span>
+                          )}
+                        </div>
+                        {t.descripcion && (
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{t.descripcion}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {!generandoPlan && tareasGeneradas.length > 0 && (
+              <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex gap-3">
+                <button onClick={() => setModalPlanIA(false)} className="flex-1 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={crearTareasIASeleccionadas}
+                  disabled={creandoTareasIA || seleccionadas.size === 0}
+                  className="flex-1 py-2 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  {creandoTareasIA ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creando…</>
+                  ) : (
+                    `Crear ${seleccionadas.size} tarea${seleccionadas.size !== 1 ? 's' : ''}`
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
