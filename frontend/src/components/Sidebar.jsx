@@ -66,81 +66,84 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       <hr className="border-white/10 mx-4 mb-2" />
 
-      {/* Nav */}
-      <nav data-tour="sidebar-nav" className="flex flex-col gap-1 px-4">
-        <NavLink to="/proyectos" end className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          Inicio
-        </NavLink>
-        <NavLink to="/proyectos/mis-tareas" className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          Mis tareas
-        </NavLink>
-        <NavLink to="/proyectos/notificaciones" className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" />
-          </svg>
-          <span className="flex-1">Notificaciones</span>
-          {noLeidas > 0 && (
-            <span className="min-w-[1.1rem] h-[1.1rem] px-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-              {noLeidas > 9 ? '9+' : noLeidas}
-            </span>
-          )}
-        </NavLink>
-        <NavLink to="/proyectos/portafolios" className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-          Portafolios
-        </NavLink>
-        <NavLink to="/proyectos/reportes" end className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          Reportes
-        </NavLink>
-        <NavLink to="/proyectos/reportes/guardados" className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
-          Personalizados
-        </NavLink>
-        <NavLink to="/proyectos/reportes/programados" className={navClass} onClick={handleNavClick}>
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Programados
-        </NavLink>
-      </nav>
+      {/* Zona scrollable: nav + checklist */}
+      <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+        {/* Nav */}
+        <nav data-tour="sidebar-nav" className="flex flex-col gap-1 px-4">
+          <NavLink to="/proyectos" end className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Inicio
+          </NavLink>
+          <NavLink to="/proyectos/mis-tareas" className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Mis tareas
+          </NavLink>
+          <NavLink to="/proyectos/notificaciones" className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" />
+            </svg>
+            <span className="flex-1">Notificaciones</span>
+            {noLeidas > 0 && (
+              <span className="min-w-[1.1rem] h-[1.1rem] px-1 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {noLeidas > 9 ? '9+' : noLeidas}
+              </span>
+            )}
+          </NavLink>
+          <NavLink to="/proyectos/portafolios" className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Portafolios
+          </NavLink>
+          <NavLink to="/proyectos/reportes" end className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Reportes
+          </NavLink>
+          <NavLink to="/proyectos/reportes/guardados" className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            Personalizados
+          </NavLink>
+          <NavLink to="/proyectos/reportes/programados" className={navClass} onClick={handleNavClick}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Programados
+          </NavLink>
+        </nav>
 
-      {/* Admin */}
-      {auth.rol === 'admin' && (
-        <>
-          <hr className="border-white/10 mx-4 my-2" />
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest px-3 mb-1">Administración</p>
-          <nav className="px-4">
-            <NavLink to="/proyectos/admin-usuarios" className={navClass} onClick={handleNavClick}>
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-5.196-3.796M9 20H4v-2a4 4 0 015.196-3.796M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              Usuarios
-            </NavLink>
-          </nav>
-        </>
-      )}
+        {/* Admin */}
+        {auth.rol === 'admin' && (
+          <>
+            <hr className="border-white/10 mx-4 my-2" />
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest px-3 mb-1">Administración</p>
+            <nav className="px-4">
+              <NavLink to="/proyectos/admin-usuarios" className={navClass} onClick={handleNavClick}>
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-5.196-3.796M9 20H4v-2a4 4 0 015.196-3.796M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Usuarios
+              </NavLink>
+            </nav>
+          </>
+        )}
 
-      {/* Spacer */}
-      <div className="flex-1" />
+        {/* Spacer */}
+        <div className="flex-1" />
 
-      {/* Checklist onboarding */}
-      <ChecklistSidebar />
+        {/* Checklist onboarding */}
+        <ChecklistSidebar />
+      </div>
 
-      {/* Botón nuevo proyecto */}
-      <div className="px-4 pb-6">
+      {/* Botón nuevo proyecto — siempre visible al fondo */}
+      <div className="px-4 pb-6 pt-2 border-t border-slate-800">
         <button
           data-tour="nuevo-proyecto"
           onClick={() => { handleModalFormulario(); onClose?.() }}
