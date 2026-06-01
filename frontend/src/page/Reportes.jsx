@@ -13,14 +13,30 @@ import FilterPanel, { FILTROS_VACIOS } from "../components/reportes/FilterPanel"
 
 const buildParams = (filtros) => {
   const p = new URLSearchParams()
-  if (filtros.fechaDesde) p.set('fechaDesde', filtros.fechaDesde)
-  if (filtros.fechaHasta) p.set('fechaHasta', filtros.fechaHasta)
-  if (filtros.prioridad?.length) p.set('prioridad', filtros.prioridad.join(','))
-  if (filtros.estadoProyecto) p.set('estadoProyecto', filtros.estadoProyecto)
-  if (filtros.area?.trim()) p.set('area', filtros.area.trim())
+  if (filtros.fechaDesde)         p.set('fechaDesde', filtros.fechaDesde)
+  if (filtros.fechaHasta)         p.set('fechaHasta', filtros.fechaHasta)
+  if (filtros.prioridad?.length)  p.set('prioridad', filtros.prioridad.join(','))
+  if (filtros.estadoTarea?.length)p.set('estadoTarea', filtros.estadoTarea.join(','))
+  if (filtros.estadoProyecto)     p.set('estadoProyecto', filtros.estadoProyecto)
+  if (filtros.area?.trim())       p.set('area', filtros.area.trim())
+  if (filtros.proyectoId)         p.set('proyectoId', filtros.proyectoId)
+  if (filtros.responsableId)      p.set('responsableId', filtros.responsableId)
+  if (filtros.soloVencidas)       p.set('soloVencidas', 'true')
   const qs = p.toString()
   return qs ? `?${qs}` : ''
 }
+
+// Chip individual para filtros activos
+const Chip = ({ label, onRemove }) => (
+  <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+    {label}
+    <button onClick={onRemove} className="text-indigo-400 hover:text-indigo-700 ml-0.5">
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </span>
+)
 
 const KpiCard = ({ label, value, sub, color = 'indigo', carga }) => {
   const colores = {
@@ -159,7 +175,12 @@ const Reportes = () => {
             </svg>
             Personalizados
           </Link>
-          <FilterPanel filtros={filtros} onChange={setFiltros} />
+          <FilterPanel
+            filtros={filtros}
+            onChange={setFiltros}
+            proyectos={proyectos}
+            usuarios={cargaUsuarios}
+          />
           <ExportMenu
             containerRef={reporteRef}
             datos={{ kpis, proyectos, porEstado, porPrioridad, evolucion, cargaUsuarios }}
@@ -168,6 +189,41 @@ const Reportes = () => {
           />
         </div>
       </div>
+
+      {/* Chips de filtros activos */}
+      {(() => {
+        const chips = []
+        const rm = (campo, val) => () => {
+          if (Array.isArray(filtros[campo])) {
+            setFiltros(f => ({ ...f, [campo]: f[campo].filter(x => x !== val) }))
+          } else {
+            setFiltros(f => ({ ...f, [campo]: typeof f[campo] === 'boolean' ? false : '' }))
+          }
+        }
+        filtros.prioridad?.forEach(p => chips.push({ key: `pri-${p}`, label: `Prioridad: ${p}`, onRemove: rm('prioridad', p) }))
+        filtros.estadoTarea?.forEach(e => chips.push({ key: `est-${e}`, label: `Estado: ${e}`, onRemove: rm('estadoTarea', e) }))
+        if (filtros.estadoProyecto) chips.push({ key: 'ep', label: `Proyecto: ${filtros.estadoProyecto}`, onRemove: rm('estadoProyecto') })
+        if (filtros.responsableId) {
+          const u = cargaUsuarios.find(u => u.usuario._id === filtros.responsableId)
+          chips.push({ key: 'resp', label: `Responsable: ${u?.usuario?.nombre ?? filtros.responsableId}`, onRemove: rm('responsableId') })
+        }
+        if (filtros.proyectoId) {
+          const p = proyectos.find(p => p._id === filtros.proyectoId)
+          chips.push({ key: 'proy', label: `Proyecto: ${p?.proyecto?.nombre ?? p?.nombre ?? filtros.proyectoId}`, onRemove: rm('proyectoId') })
+        }
+        if (filtros.area) chips.push({ key: 'area', label: `Área: ${filtros.area}`, onRemove: rm('area') })
+        if (filtros.soloVencidas) chips.push({ key: 'venc', label: 'Solo vencidas', onRemove: rm('soloVencidas') })
+        if (filtros.fechaDesde || filtros.fechaHasta) chips.push({ key: 'fecha', label: `Período: ${filtros.fechaDesde || '…'} → ${filtros.fechaHasta || '…'}`, onRemove: () => setFiltros(f => ({ ...f, fechaDesde: '', fechaHasta: '' })) })
+        if (!chips.length) return null
+        return (
+          <div className="flex flex-wrap gap-1.5 mb-5 -mt-2">
+            {chips.map(c => <Chip key={c.key} label={c.label} onRemove={c.onRemove} />)}
+            <button onClick={() => setFiltros(FILTROS_VACIOS)} className="text-xs text-slate-400 hover:text-red-500 px-1.5 py-0.5 rounded-full border border-slate-200 hover:border-red-200 transition-colors">
+              Limpiar todo
+            </button>
+          </div>
+        )
+      })()}
 
       {error && (
         <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">

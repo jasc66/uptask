@@ -7,9 +7,10 @@ const ESTADOS_VALIDOS = ['Pendiente', 'En Progreso', 'En Revisión', 'Completada
 const PRIORIDADES_VALIDAS = ['Baja', 'Media', 'Alta', 'Urgente'];
 const ESTADOS_PROYECTO_VALIDOS = ['Activo', 'Pausado', 'Completado', 'Cancelado'];
 
-// Parsea query params de filtro; devuelve fechaRange, filtrosEnum y narrowOpts
+// Parsea query params de filtro; devuelve fechaRange, filtrosEnum, narrowOpts y hayFecha
 const parseFiltros = (query) => {
-    const { fechaDesde, fechaHasta, prioridad, proyectoId, area, estadoProyecto } = query;
+    const { fechaDesde, fechaHasta, prioridad, proyectoId, area, estadoProyecto,
+            responsableId, estadoTarea, soloVencidas } = query;
 
     const fechaRange = {};
     if (fechaDesde) fechaRange.$gte = new Date(fechaDesde);
@@ -18,13 +19,36 @@ const parseFiltros = (query) => {
         h.setHours(23, 59, 59, 999);
         fechaRange.$lte = h;
     }
-    const hayFecha = !!(fechaRange.$gte || fechaRange.$lte);
+    let hayFecha = !!(fechaRange.$gte || fechaRange.$lte);
 
     const filtrosEnum = {};
+
+    // Prioridad (multi)
     if (prioridad) {
         const arr = (Array.isArray(prioridad) ? prioridad : prioridad.split(','))
             .filter(p => PRIORIDADES_VALIDAS.includes(p));
         if (arr.length > 0) filtrosEnum.prioridad = { $in: arr };
+    }
+
+    // Estado de tarea (multi)
+    if (estadoTarea) {
+        const arr = (Array.isArray(estadoTarea) ? estadoTarea : estadoTarea.split(','))
+            .filter(e => ESTADOS_VALIDOS.includes(e));
+        if (arr.length > 0) filtrosEnum.estado = { $in: arr };
+    }
+
+    // Responsable: buscar en responsable singular O en array responsables
+    if (responsableId && mongoose.Types.ObjectId.isValid(responsableId)) {
+        const rid = new mongoose.Types.ObjectId(responsableId);
+        filtrosEnum.$or = [{ responsable: rid }, { responsables: rid }];
+    }
+
+    // Solo vencidas: fechaEntrega < ahora y no completadas
+    if (soloVencidas === 'true') {
+        const ahora = new Date();
+        fechaRange.$lt = ahora;
+        hayFecha = true;
+        if (!filtrosEnum.estado) filtrosEnum.estado = { $ne: 'Completada' };
     }
 
     const narrowOpts = {};
@@ -180,15 +204,18 @@ const getTareasPorEstado = async (req, res) => {
 // GET /api/reportes/tareas-por-prioridad
 const getTareasPorPrioridad = async (req, res) => {
     try {
-        const { fechaRange, narrowOpts, hayFecha } = parseFiltros(req.query);
+        const { fechaRange, filtrosEnum, narrowOpts, hayFecha } = parseFiltros(req.query);
         const proyectosIdsBase = await getProyectosVisibles(req.usuario);
         const proyectosIds = await applyNarrow(proyectosIdsBase, narrowOpts);
+        // Excluir filtro de prioridad del filtrosEnum para no eliminar barras del donut
+        const { prioridad: _skip, ...filtrosBase } = filtrosEnum;
         const resultado = await Tarea.aggregate([
             {
                 $match: {
                     proyecto: { $in: proyectosIds },
                     tareaPadre: null,
                     prioridad: { $in: PRIORIDADES_VALIDAS },
+                    ...filtrosBase,
                     ...(hayFecha ? { fechaEntrega: fechaRange } : {}),
                 },
             },
