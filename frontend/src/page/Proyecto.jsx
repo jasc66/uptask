@@ -11,6 +11,7 @@ import CalendarioVista from "../components/CalendarioVista"
 import GanttVista from "../components/GanttVista"
 import StatusUpdates from "../components/StatusUpdates"
 import AutomatizacionesVista from "../components/AutomatizacionesVista"
+import IntegracionesVista from "../components/IntegracionesVista"
 
 const PRIORIDAD_COLOR = {
   Alta: 'bg-red-100 text-red-700',
@@ -559,10 +560,21 @@ const Proyecto = () => {
                   Reglas
                 </button>
               )}
+              {puedeAdministrar && (
+                <button
+                  onClick={() => setVista('integraciones')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${vista === 'integraciones' ? 'bg-[#6d4afe] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Integraciones
+                </button>
+              )}
             </div>
           </div>
 
-          {vista !== 'reportes' && vista !== 'automatizaciones' && <div className="flex items-center gap-2">
+          {vista !== 'reportes' && vista !== 'automatizaciones' && vista !== 'integraciones' && <div className="flex items-center gap-2">
             {vista !== 'calendario' && vista !== 'gantt' && (tareas?.length > 0) && (
               <button
                 onClick={() => setMostrarFiltros(v => !v)}
@@ -598,7 +610,7 @@ const Proyecto = () => {
         </div>
 
         {/* Barra de filtros */}
-        {mostrarFiltros && vista !== 'reportes' && vista !== 'calendario' && vista !== 'gantt' && vista !== 'automatizaciones' && (
+        {mostrarFiltros && vista !== 'reportes' && vista !== 'calendario' && vista !== 'gantt' && vista !== 'automatizaciones' && vista !== 'integraciones' && (
           <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <div className="flex flex-wrap gap-x-6 gap-y-3">
               <div>
@@ -703,6 +715,8 @@ const Proyecto = () => {
           />
         ) : vista === 'reportes' ? (
           <ReportesProyecto proyectoId={params.id} embedded />
+        ) : vista === 'integraciones' ? (
+          <IntegracionesVista proyectoId={params.id} />
         ) : vista === 'automatizaciones' ? (
           <AutomatizacionesVista
             proyectoId={params.id}

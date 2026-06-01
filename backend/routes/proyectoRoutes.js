@@ -31,6 +31,15 @@ import {
     eliminarAutomatizacion,
     toggleAutomatizacion,
 } from "../contollers/automatizacionController.js";
+import {
+    obtenerIntegraciones,
+    crearIntegracion,
+    actualizarIntegracion,
+    eliminarIntegracion,
+    toggleIntegracion,
+    testearIntegracion,
+    exportarIcal,
+} from "../contollers/integracionController.js";
 import checkAuth from "../middleware/checkAuth.js";
 
 const router = express.Router();
@@ -83,5 +92,15 @@ router.route('/:id/automatizaciones/:automatizacionId')
     .put(checkAuth, actualizarAutomatizacion)
     .delete(checkAuth, eliminarAutomatizacion);
 router.post('/:id/automatizaciones/:automatizacionId/toggle', checkAuth, toggleAutomatizacion);
+
+router.route('/:id/integraciones')
+    .get(checkAuth, obtenerIntegraciones)
+    .post(checkAuth, crearIntegracion);
+router.route('/:id/integraciones/:integracionId')
+    .put(checkAuth, actualizarIntegracion)
+    .delete(checkAuth, eliminarIntegracion);
+router.post('/:id/integraciones/:integracionId/toggle', checkAuth, toggleIntegracion);
+router.post('/:id/integraciones/:integracionId/test', checkAuth, testearIntegracion);
+router.get('/:id/ical', checkAuth, exportarIcal);
 
 export default router;

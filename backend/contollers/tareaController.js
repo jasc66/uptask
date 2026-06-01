@@ -7,6 +7,7 @@ import { crearNotificacion, extraerMenciones } from "../helpers/notificaciones.j
 import { uploadBuffer, deleteAsset } from "../helpers/cloudinary.js";
 import { calcNextDate } from "../helpers/recurrenciaScheduler.js";
 import { ejecutarAutomatizaciones } from "../helpers/automationEngine.js";
+import { disparar } from "../helpers/integracionEngine.js";
 
 // --- helpers de permisos ---
 const esCreador = (proyecto, usuarioId) =>
@@ -87,8 +88,9 @@ const agregarTarea = async (req, res) => {
         });
         emitirEventoTarea(existeProyecto, 'nueva', { tareaId: tareaAlmacenada._id, proyectoId: existeProyecto._id });
 
-        // Ejecutar automatizaciones para tarea_creada
+        // Ejecutar automatizaciones e integraciones para tarea_creada
         ejecutarAutomatizaciones('tarea_creada', tareaAlmacenada).catch(console.error);
+        disparar('tarea_creada', tareaAlmacenada, existeProyecto).catch(console.error);
 
         // Notificar a cada responsable asignado al crear
         for (const uid of responsables) {
@@ -222,6 +224,7 @@ const actualizarTarea = async (req, res) => {
 
         if (nuevasAsignaciones.length > 0) {
             ejecutarAutomatizaciones('tarea_asignada', tareaAlmacenada).catch(console.error);
+            disparar('tarea_asignada', tareaAlmacenada, tarea.proyecto).catch(console.error);
         }
 
         res.json(tareaAlmacenada);
@@ -306,11 +309,13 @@ const cambiarEstado = async (req, res) => {
         const tareaActualizada = await tarea.save();
         emitirEventoTarea(tarea.proyecto, 'estado', { tareaId: tarea._id, proyectoId: tarea.proyecto._id, estado });
 
-        // Ejecutar automatizaciones de cambio de estado
+        // Ejecutar automatizaciones e integraciones de cambio de estado
         if (estadoAnterior !== estado) {
             ejecutarAutomatizaciones('tarea_estado_cambiado', tareaActualizada).catch(console.error);
+            disparar('tarea_estado_cambiado', tareaActualizada, tarea.proyecto).catch(console.error);
             if (estado === 'Completada') {
                 ejecutarAutomatizaciones('tarea_completada', tareaActualizada).catch(console.error);
+                disparar('tarea_completada', tareaActualizada, tarea.proyecto).catch(console.error);
             }
         }
 
@@ -457,6 +462,8 @@ const agregarComentario = async (req, res) => {
                 origen: req.usuario._id,
             });
         }
+
+        disparar('comentario_agregado', tarea, tarea.proyecto).catch(console.error);
 
         res.json(nuevaEntrada);
     } catch (error) {

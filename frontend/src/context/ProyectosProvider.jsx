@@ -690,6 +690,91 @@ const ProyectosProvider = ({children}) => {
         }
     }
 
+    // --- Integraciones ---
+    const obtenerIntegraciones = async (proyectoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return []
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios(`/proyectos/${proyectoId}/integraciones`, config)
+            return data
+        } catch (error) {
+            console.log(error)
+            return []
+        }
+    }
+
+    const crearIntegracion = async (proyectoId, datos) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/integraciones`, datos, config)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear integración', error: true })
+            return null
+        }
+    }
+
+    const eliminarIntegracion = async (proyectoId, integracionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            await clienteAxios.delete(`/proyectos/${proyectoId}/integraciones/${integracionId}`, config)
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al eliminar integración', error: true })
+        }
+    }
+
+    const toggleIntegracion = async (proyectoId, integracionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/integraciones/${integracionId}/toggle`, {}, config)
+            return data
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al cambiar estado', error: true })
+            return null
+        }
+    }
+
+    const testearIntegracion = async (proyectoId, integracionId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return false
+            const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            const { data } = await clienteAxios.post(`/proyectos/${proyectoId}/integraciones/${integracionId}/test`, {}, config)
+            mostrarAlerta({ msg: data.msg, error: false })
+            return true
+        } catch (error) {
+            mostrarAlerta({ msg: error.response?.data?.msg || 'Error al testear integración', error: true })
+            return false
+        }
+    }
+
+    const descargarIcal = async (proyectoId) => {
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) return
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/proyectos/${proyectoId}/ical`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (!response.ok) throw new Error('Error al generar iCal')
+            const blob = await response.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `nexo-proyecto.ics`
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch (error) {
+            mostrarAlerta({ msg: 'Error al descargar el archivo iCal', error: true })
+        }
+    }
+
     // --- Automatizaciones ---
     const obtenerAutomatizaciones = async (proyectoId) => {
         try {
@@ -965,6 +1050,12 @@ const ProyectosProvider = ({children}) => {
                 crearPlantillaDesdeProyecto,
                 eliminarPlantilla,
                 crearProyectoDesdePlantilla,
+                obtenerIntegraciones,
+                crearIntegracion,
+                eliminarIntegracion,
+                toggleIntegracion,
+                testearIntegracion,
+                descargarIcal,
                 obtenerAutomatizaciones,
                 crearAutomatizacion,
                 actualizarAutomatizacion,
