@@ -66,9 +66,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       <hr className="border-white/10 mx-4 mb-2" />
 
-      {/* Zona scrollable: nav + checklist */}
-      <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
-        {/* Nav */}
+      {/* Nav — zona scrollable solo con los enlaces */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         <nav data-tour="sidebar-nav" className="flex flex-col gap-1 px-4">
           <NavLink to="/proyectos" end className={navClass} onClick={handleNavClick}>
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,15 +133,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             </nav>
           </>
         )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Checklist onboarding */}
-        <ChecklistSidebar />
       </div>
 
-      {/* Botón nuevo proyecto — siempre visible al fondo */}
+      {/* Checklist onboarding — fuera del scroll, siempre visible completo */}
+      <ChecklistSidebar />
+
+      {/* Botón nuevo proyecto */}
       <div className="px-4 pb-6 pt-2 border-t border-slate-800">
         <button
           data-tour="nuevo-proyecto"
