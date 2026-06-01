@@ -104,6 +104,9 @@ const Proyecto = () => {
   const [tareasGeneradas, setTareasGeneradas] = useState([])
   const [creandoTareasIA, setCreandoTareasIA] = useState(false)
   const [seleccionadas, setSeleccionadas] = useState(new Set())
+  const [modalRiesgos, setModalRiesgos] = useState(false)
+  const [analizandoRiesgos, setAnalizandoRiesgos] = useState(false)
+  const [analisisRiesgos, setAnalisisRiesgos] = useState(null)
 
   const toggleSeccion = (estado) =>
     setSeccionesColapsadas(prev => ({ ...prev, [estado]: !prev[estado] }))
@@ -332,6 +335,22 @@ const Proyecto = () => {
     return next
   })
 
+  const abrirAnalisisRiesgos = async () => {
+    setAnalisisRiesgos(null)
+    setModalRiesgos(true)
+    setAnalizandoRiesgos(true)
+    try {
+      const token = localStorage.getItem('token')
+      const config = { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      const { data } = await clienteAxios.post(`/ia/analizar-riesgos/${proyecto._id}`, {}, config)
+      setAnalisisRiesgos(data)
+    } catch {
+      setModalRiesgos(false)
+    } finally {
+      setAnalizandoRiesgos(false)
+    }
+  }
+
   const renderTarjetaKanban = (tarea) => (
     <div
       key={tarea._id}
@@ -520,6 +539,18 @@ const Proyecto = () => {
             >
               <span>✨</span>
               <span className="hidden sm:inline">Plan IA</span>
+            </button>
+          )}
+          {puedeAdministrar && tareas?.length > 0 && (
+            <button
+              onClick={abrirAnalisisRiesgos}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-violet-600 bg-violet-50 border border-violet-200 rounded-lg hover:bg-violet-100 transition-colors"
+              title="Analizar riesgos del proyecto con IA"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span className="hidden sm:inline">Riesgos IA</span>
             </button>
           )}
           {puedeAdministrar && (
@@ -1454,6 +1485,148 @@ const Proyecto = () => {
         <Modal titulo={puedeEditarEstado ? "Tarea" : "Detalle de tarea"} onClose={handleModalTarea}>
           <FormularioTarea />
         </Modal>
+      )}
+
+      {/* Modal Análisis de Riesgos IA */}
+      {modalRiesgos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-800">Análisis de riesgos</h2>
+                  <p className="text-xs text-slate-400">Diagnóstico IA del proyecto</p>
+                </div>
+              </div>
+              <button onClick={() => setModalRiesgos(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+              {analizandoRiesgos ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-slate-500">Analizando métricas del proyecto…</p>
+                </div>
+              ) : analisisRiesgos && (() => {
+                const { nivel, puntuacion, resumen, riesgos = [], recomendaciones = [], metricas = {} } = analisisRiesgos
+                const nivelCfg = {
+                  alto:  { bg: 'bg-red-100',    text: 'text-red-700',    ring: 'ring-red-300',    dot: 'bg-red-500',    label: 'Riesgo alto' },
+                  medio: { bg: 'bg-amber-100',   text: 'text-amber-700',  ring: 'ring-amber-300',  dot: 'bg-amber-500',  label: 'Riesgo medio' },
+                  bajo:  { bg: 'bg-emerald-100', text: 'text-emerald-700',ring: 'ring-emerald-300',dot: 'bg-emerald-500',label: 'Riesgo bajo' },
+                }[nivel] ?? { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'ring-slate-300', dot: 'bg-slate-400', label: nivel }
+
+                return (
+                  <>
+                    {/* Nivel + Puntuación */}
+                    <div className="flex items-center gap-4">
+                      <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${nivelCfg.bg} ring-1 ${nivelCfg.ring}`}>
+                        <span className={`w-3 h-3 rounded-full shrink-0 ${nivelCfg.dot}`} />
+                        <span className={`text-sm font-bold ${nivelCfg.text}`}>{nivelCfg.label}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl font-bold text-slate-800">{puntuacion}</span>
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wide">/ 100</span>
+                      </div>
+                      {/* Barra de puntuación */}
+                      <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            puntuacion >= 70 ? 'bg-emerald-500' : puntuacion >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${puntuacion}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Resumen */}
+                    <p className="text-sm text-slate-600 leading-relaxed">{resumen}</p>
+
+                    {/* Métricas rápidas */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { label: 'Vencidas', value: metricas.vencidas ?? 0, total: metricas.total, warn: (metricas.vencidas ?? 0) > 0 },
+                        { label: 'Sin asignar', value: metricas.sinAsignar ?? 0, total: metricas.total, warn: (metricas.sinAsignar ?? 0) > 0 },
+                        { label: 'Bloqueadas', value: metricas.bloqueadas ?? 0, total: metricas.total, warn: (metricas.bloqueadas ?? 0) > 0 },
+                        { label: 'Velocidad 7d', value: metricas.velocidad7d ?? 0, suffix: ' tareas', warn: false },
+                      ].map(m => (
+                        <div key={m.label} className={`rounded-xl p-3 text-center ${m.warn && m.value > 0 ? 'bg-red-50 border border-red-100' : 'bg-slate-50 border border-slate-100'}`}>
+                          <p className={`text-xl font-bold ${m.warn && m.value > 0 ? 'text-red-600' : 'text-slate-700'}`}>
+                            {m.value}{m.suffix ?? ''}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{m.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Riesgos */}
+                    {riesgos.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Riesgos identificados</p>
+                        <ul className="space-y-1.5">
+                          {riesgos.map((r, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                              <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Recomendaciones */}
+                    {recomendaciones.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Recomendaciones</p>
+                        <ul className="space-y-1.5">
+                          {recomendaciones.map((r, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                              <svg className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+
+            {!analizandoRiesgos && analisisRiesgos && (
+              <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex gap-3">
+                <button
+                  onClick={() => { setAnalisisRiesgos(null); abrirAnalisisRiesgos() }}
+                  className="flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-3 py-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Volver a analizar
+                </button>
+                <button
+                  onClick={() => setModalRiesgos(false)}
+                  className="flex-1 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Modal Plan IA */}

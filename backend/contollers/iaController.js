@@ -1,6 +1,7 @@
 import { completar } from '../helpers/ia.js';
 import Proyecto from '../models/Proyecto.js';
 import Tarea from '../models/Tarea.js';
+import Usuario from '../models/Usuario.js';
 
 const parsearJSON = (texto) => {
     const limpio = texto.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -94,6 +95,99 @@ Responde ÚNICAMENTE con JSON:
     } catch (error) {
         console.log('[IA] resumirProyecto error:', error.message);
         res.status(500).json({ msg: 'Error al generar el resumen' });
+    }
+};
+
+// POST /api/ia/analizar-riesgos/:id
+export const analizarRiesgos = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const proyecto = await Proyecto.findById(id).lean();
+        if (!proyecto) return res.status(404).json({ msg: 'Proyecto no encontrado' });
+
+        const esCreador = proyecto.creador.toString() === req.usuario._id.toString();
+        const esColaborador = proyecto.colaboradores.some(c => c.usuario.toString() === req.usuario._id.toString());
+        if (!esCreador && !esColaborador && req.usuario.rol !== 'admin') {
+            return res.status(403).json({ msg: 'Sin acceso' });
+        }
+
+        const ahora = new Date();
+        const tareas = await Tarea.find({ proyecto: id, tareaPadre: null })
+            .populate('responsables', 'nombre')
+            .populate('dependencias.tarea', 'nombre estado')
+            .lean();
+
+        const total = tareas.length;
+        const completadas = tareas.filter(t => t.estado === 'Completada').length;
+        const vencidas = tareas.filter(t =>
+            t.estado !== 'Completada' && t.fechaEntrega && new Date(t.fechaEntrega) < ahora
+        ).length;
+        const sinAsignar = tareas.filter(t =>
+            !t.responsable && (!t.responsables?.length)
+        ).length;
+        const bloqueadas = tareas.filter(t =>
+            t.dependencias?.some(d => d.tipo === 'depende_de' && d.tarea?.estado !== 'Completada')
+        ).length;
+
+        const hace7dias = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const velocidad7d = tareas.filter(t => t.completadaEn && new Date(t.completadaEn) > hace7dias).length;
+
+        // Desbalance de carga
+        const cargaMap = {};
+        tareas.forEach(t => {
+            const resps = t.responsables?.length ? t.responsables : (t.responsable ? [{ _id: t.responsable }] : []);
+            resps.forEach(r => {
+                const rid = (r._id ?? r).toString();
+                cargaMap[rid] = (cargaMap[rid] || 0) + 1;
+            });
+        });
+        const cargas = Object.values(cargaMap);
+        const desbalance = cargas.length > 1 ? Math.max(...cargas) - Math.min(...cargas) : 0;
+
+        const diasRestantes = proyecto.fechaEntrega
+            ? Math.ceil((new Date(proyecto.fechaEntrega) - ahora) / (1000 * 60 * 60 * 24))
+            : null;
+
+        const pct = total > 0 ? Math.round((completadas / total) * 100) : 0;
+        const pctVencidas = total > 0 ? Math.round((vencidas / total) * 100) : 0;
+
+        const metricas = { total, completadas, pct, vencidas, pctVencidas, sinAsignar, bloqueadas, velocidad7d, desbalance, diasRestantes };
+
+        const respuesta = await completar([
+            {
+                role: 'system',
+                content: 'Eres un experto en gestión de proyectos. Respondes siempre con JSON válido sin markdown.',
+            },
+            {
+                role: 'user',
+                content: `Analiza los riesgos de este proyecto y devuelve un diagnóstico:
+
+Proyecto: "${proyecto.nombre}"
+${diasRestantes !== null ? `Días restantes: ${diasRestantes}` : 'Sin fecha de entrega'}
+Avance: ${completadas}/${total} tareas (${pct}%)
+Tareas vencidas: ${vencidas} (${pctVencidas}%)
+Sin asignar: ${sinAsignar}
+Bloqueadas por dependencias: ${bloqueadas}
+Velocidad (completadas últimos 7 días): ${velocidad7d}
+Desbalance de carga entre usuarios: ${desbalance} tareas de diferencia
+
+Responde ÚNICAMENTE con JSON (sin texto extra):
+{
+  "nivel": "alto"|"medio"|"bajo",
+  "puntuacion": número 0-100 (0=crítico, 100=óptimo),
+  "resumen": "diagnóstico en 1-2 oraciones (máx 150 chars)",
+  "riesgos": ["riesgo específico 1", "riesgo específico 2"],
+  "recomendaciones": ["acción concreta 1", "acción concreta 2", "acción concreta 3"]
+}`,
+            },
+        ], { temperatura: 0.3, maxTokens: 700 });
+
+        const data = parsearJSON(respuesta);
+        res.json({ ...data, metricas });
+    } catch (error) {
+        console.log('[IA] analizarRiesgos error:', error.message);
+        res.status(500).json({ msg: 'Error al analizar los riesgos' });
     }
 };
 
