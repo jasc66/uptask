@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import useOnboarding from '../hooks/useOnboarding'
+import { marcarProgresoOnboarding } from '../hooks/useOnboarding'
 
 const ChecklistSidebar = () => {
     const { items, estaCompletado, porcentaje, todoCompletado, oculto, ocultarChecklist } = useOnboarding()
@@ -39,8 +40,13 @@ const ChecklistSidebar = () => {
                     {items.map(item => {
                         const done = estaCompletado(item.id)
                         return (
-                            <div key={item.id} className={`flex items-center gap-2 text-xs transition-opacity ${done ? 'opacity-60' : ''}`}>
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-indigo-600' : 'border border-slate-500'}`}>
+                            <button
+                                key={item.id}
+                                onClick={() => !done && marcarProgresoOnboarding(item.id)}
+                                disabled={done}
+                                className={`w-full flex items-center gap-2 text-xs text-left transition-all rounded-lg px-1 py-0.5 ${done ? 'opacity-60 cursor-default' : 'hover:bg-slate-700/60 cursor-pointer'}`}
+                            >
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-indigo-600' : 'border border-slate-500 hover:border-indigo-400'}`}>
                                     {done && (
                                         <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -50,7 +56,7 @@ const ChecklistSidebar = () => {
                                 <span className={`truncate ${done ? 'line-through text-slate-500' : 'text-slate-300'}`}>
                                     {item.label}
                                 </span>
-                            </div>
+                            </button>
                         )
                     })}
 
