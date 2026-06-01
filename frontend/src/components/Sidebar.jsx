@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom"
 import useAuth from "../hooks/useAuth"
 import useProyectos from "../hooks/useProyectos"
 import useNotificaciones from "../hooks/useNotificaciones"
+import ChecklistSidebar from "./ChecklistSidebar"
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { auth } = useAuth()
@@ -66,7 +67,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       <hr className="border-white/10 mx-4 mb-2" />
 
       {/* Nav */}
-      <nav className="flex flex-col gap-1 px-4">
+      <nav data-tour="sidebar-nav" className="flex flex-col gap-1 px-4">
         <NavLink to="/proyectos" end className={navClass} onClick={handleNavClick}>
           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -135,9 +136,13 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Checklist onboarding */}
+      <ChecklistSidebar />
+
       {/* Botón nuevo proyecto */}
       <div className="px-4 pb-6">
         <button
+          data-tour="nuevo-proyecto"
           onClick={() => { handleModalFormulario(); onClose?.() }}
           className="flex items-center justify-center gap-2 w-full min-h-[44px] py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
         >

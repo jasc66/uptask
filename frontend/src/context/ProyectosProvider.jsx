@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useContext } from "react";
 import clienteAxios from "../config/clienteAxios";
 import AuthContext from "./AuthProvider";
 import ProyectoContext from "./ProyectoContext";
+import { marcarProgresoOnboarding } from "../hooks/useOnboarding";
 
 const ProyectosProvider = ({children}) => {
 
@@ -120,6 +121,7 @@ const ProyectosProvider = ({children}) => {
             const { data } = await clienteAxios.post('/proyectos', proyecto, config)
             setProyectos([...proyectos, data])
             mostrarAlerta({ msg: 'Proyecto creado correctamente', error: false })
+            marcarProgresoOnboarding('crear_proyecto')
 
         } catch (error) {
             console.log(error)
@@ -187,6 +189,7 @@ const ProyectosProvider = ({children}) => {
             setProyecto(prev => ({ ...prev, tareas: [...(prev.tareas ?? []), data] }))
             mostrarAlerta({ msg: 'Tarea creada correctamente', error: false })
             setModalFormularioTarea(false)
+            marcarProgresoOnboarding('crear_tarea')
         } catch (error) {
             console.log(error)
             mostrarAlerta({ msg: error.response?.data?.msg || 'Error al crear la tarea', error: true })
@@ -375,6 +378,7 @@ const ProyectosProvider = ({children}) => {
                 ...prev,
                 tareas: prev.tareas.map(t => t._id === data._id ? { ...t, estado: data.estado } : t)
             }))
+            if (estado === 'Completada') marcarProgresoOnboarding('completar_tarea')
         } catch (error) {
             mostrarAlerta({ msg: error.response?.data?.msg || 'Error al cambiar estado', error: true })
         }
@@ -974,6 +978,7 @@ const ProyectosProvider = ({children}) => {
             const { data } = await clienteAxios.post(`/proyectos/agregar-colaborador/${proyectoId}`, datos, config)
             mostrarAlerta({ msg: data.msg, error: false })
             await obtenerProyecto(proyectoId)
+            marcarProgresoOnboarding('agregar_colaborador')
         } catch (error) {
             mostrarAlerta({ msg: error.response?.data?.msg || 'Error al agregar colaborador', error: true })
         }

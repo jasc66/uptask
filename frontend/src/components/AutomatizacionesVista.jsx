@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import useProyectos from "../hooks/useProyectos"
+import { marcarProgresoOnboarding } from "../hooks/useOnboarding"
 
 const EVENTOS = [
     { value: 'tarea_creada',              label: 'Se crea una tarea' },
@@ -327,7 +328,10 @@ const AutomatizacionesVista = ({ proyectoId, secciones, colaboradores }) => {
 
     const handleCrear = async (pid, datos) => {
         const nueva = await crearAutomatizacion(pid, datos)
-        if (nueva) setAutomatizaciones(prev => [nueva, ...prev])
+        if (nueva) {
+            setAutomatizaciones(prev => [nueva, ...prev])
+            marcarProgresoOnboarding('crear_automatizacion')
+        }
         return nueva
     }
 
