@@ -1,4 +1,4 @@
-import Joyride, { STATUS } from 'react-joyride'
+import { Joyride, STATUS } from 'react-joyride'
 import useOnboarding from '../hooks/useOnboarding'
 
 const PASOS = [
